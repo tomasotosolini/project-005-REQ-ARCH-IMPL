@@ -1,0 +1,171 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+#
+# Fake xl — stateful emulator for Xen's xl CLI.
+#
+# Replaces the real xl binary in development via a PATH override (see Procfile.dev).
+# Guest state is persisted in a JSON file so that lifecycle operations survive
+# across requests and SSE polling cycles.
+#
+# State file location: tmp/fake-xen/state.json
+# Override with the FAKE_XEN_STATE environment variable.
+#
+# Supported subcommands: list, create, shutdown, destroy, vcpu-set, mem-set
+
+require 'json'
+require 'fileutils'
+
+STATE_FILE = ENV.fetch('FAKE_XEN_STATE') do
+  File.expand_path('../tmp/fake-xen/state.json', __dir__)
+end
+
+INITIAL_STATE = { 'guests' => [], 'next_id' => 1 }.freeze
+
+# ── state I/O ─────────────────────────────────────────────────────────────────
+
+def load_state
+  FileUtils.mkdir_p(File.dirname(STATE_FILE))
+  return INITIAL_STATE.dup unless File.exist?(STATE_FILE)
+
+  JSON.parse(File.read(STATE_FILE))
+rescue JSON::ParserError
+  INITIAL_STATE.dup
+end
+
+def save_state(state)
+  FileUtils.mkdir_p(File.dirname(STATE_FILE))
+  tmp = "#{STATE_FILE}.tmp.#{Process.pid}"
+  File.write(tmp, JSON.pretty_generate(state))
+  File.rename(tmp, STATE_FILE)
+end
+
+# ── helpers ───────────────────────────────────────────────────────────────────
+
+def running_guests(state)
+  state['guests'].select { |g| g['state'] == 'running' }
+end
+
+def find_running(state, name)
+  state['guests'].find { |g| g['name'] == name && g['state'] == 'running' }
+end
+
+def parse_config(path)
+  text  = File.read(path)
+  name  = text[/^name\s*=\s*["']?([^"'\s]+)["']?/, 1]
+  vcpus = text[/^vcpus\s*=\s*(\d+)/, 1]&.to_i  || 1
+  mem   = text[/^memory\s*=\s*(\d+)/, 1]&.to_i || 512
+  [name, vcpus, mem]
+end
+
+# ── subcommand handlers ───────────────────────────────────────────────────────
+
+def cmd_list(state)
+  # Header matches real xl list output (tabs between VCPUs/State and State/Time)
+  puts "Name                                        ID   Mem VCPUs\tState\tTime(s)"
+  # dom0 is always present and always running
+  puts format("%-40s %4d %5d %5d\t%-6s\t%8.1f",
+              'Domain-0', 0, 1024, 1, 'r-----', rand(10_000..99_999).to_f / 10)
+  running_guests(state).each do |g|
+    puts format("%-40s %4d %5d %5d\t%-6s\t%8.1f",
+                g['name'], g['id'], g['memory'], g['vcpus'],
+                '-b----', rand(100..9999).to_f / 10)
+  end
+end
+
+def cmd_create(state, config_path)
+  unless config_path && File.exist?(config_path)
+    warn "xl: cannot open config file '#{config_path}'"
+    exit 1
+  end
+
+  name, vcpus, memory = parse_config(config_path)
+
+  unless name
+    warn "xl: could not determine guest name from config '#{config_path}'"
+    exit 1
+  end
+
+  if find_running(state, name)
+    warn "xl: domain '#{name}' already exists"
+    exit 1
+  end
+
+  existing = state['guests'].find { |g| g['name'] == name }
+  if existing
+    existing.merge!('state' => 'running', 'id' => state['next_id'],
+                    'vcpus' => vcpus, 'memory' => memory)
+  else
+    state['guests'] << {
+      'name'   => name,
+      'id'     => state['next_id'],
+      'vcpus'  => vcpus,
+      'memory' => memory,
+      'state'  => 'running'
+    }
+  end
+  state['next_id'] += 1
+
+  puts "Parsing config from #{config_path}"
+  puts "Starting domain #{name}"
+  save_state(state)
+end
+
+def cmd_shutdown(state, name)
+  guest = find_running(state, name)
+  unless guest
+    warn "xl: domain '#{name}' does not exist"
+    exit 1
+  end
+  guest['state'] = 'stopped'
+  save_state(state)
+  # xl shutdown exits silently on success
+end
+
+def cmd_destroy(state, name)
+  guest = find_running(state, name)
+  unless guest
+    warn "xl: domain '#{name}' does not exist"
+    exit 1
+  end
+  guest['state'] = 'stopped'
+  save_state(state)
+  # xl destroy exits silently on success
+end
+
+def cmd_vcpu_set(state, name, count)
+  guest = find_running(state, name)
+  unless guest
+    warn "xl: domain '#{name}' does not exist"
+    exit 1
+  end
+  guest['vcpus'] = count.to_i
+  save_state(state)
+end
+
+def cmd_mem_set(state, name, mib)
+  guest = find_running(state, name)
+  unless guest
+    warn "xl: domain '#{name}' does not exist"
+    exit 1
+  end
+  guest['memory'] = mib.to_i
+  save_state(state)
+end
+
+# ── dispatch ──────────────────────────────────────────────────────────────────
+
+subcmd = ARGV.shift
+state  = load_state
+
+case subcmd
+when 'list'     then cmd_list(state)
+when 'create'   then cmd_create(state, ARGV[0])
+when 'shutdown' then cmd_shutdown(state, ARGV[0])
+when 'destroy'  then cmd_destroy(state, ARGV[0])
+when 'vcpu-set' then cmd_vcpu_set(state, ARGV[0], ARGV[1])
+when 'mem-set'  then cmd_mem_set(state, ARGV[0], ARGV[1])
+else
+  warn "xl: unknown subcommand '#{subcmd || '(none)'}'"
+  warn "Supported: list, create, shutdown, destroy, vcpu-set, mem-set"
+  exit 1
+end

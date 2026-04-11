@@ -1,0 +1,7 @@
+# frozen_string_literal: true
+source 'https://rubygems.org'
+
+# Minimal Gemfile for running bin/fake_xl specs before the Rails app is created.
+# This file will be replaced (expanded) by `rails new`.
+
+gem 'rspec', '~> 3.13'

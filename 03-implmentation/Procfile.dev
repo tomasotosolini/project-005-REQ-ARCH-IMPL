@@ -1,0 +1,2 @@
+web:    PATH=bin/fake:$PATH bin/rails server -p 3000
+worker: PATH=bin/fake:$PATH bin/jobs
