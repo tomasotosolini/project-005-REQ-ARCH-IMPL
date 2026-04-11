@@ -4,6 +4,14 @@ Working notes on the implementation layer: patterns in use, non-obvious choices,
 
 <!-- Add entries below. Most recent first. -->
 
+## 2026-04-12 — guests#show
+
+- Route: `GET /guests/:name` using `:name` (Xen domain name) rather than a DB id — Xen is authoritative, not the DB.
+- `show` finds the guest by scanning `GuestLister.list`; also looks up the `Guest` DB record. If neither exists, redirects to `guests_path` with an alert.
+- Show page renders Xen data when the guest is running; shows "not currently running" when only a DB record exists (stopped guest that hasn't been deleted from DB).
+- Index view links each guest name to its show page via `guest_path(guest.name)`.
+- Suite: 82 examples, 0 failures.
+
 ## 2026-04-12 — Xen service layer + guests#index
 
 - `Xen::Executor.run(cmd, *args)` — shells out via `Open3.capture3` using an explicit argument array (no shell interpolation). Raises `Xen::CommandError` (with stdout/stderr attached) on non-zero exit.
