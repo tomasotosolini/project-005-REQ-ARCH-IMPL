@@ -4,6 +4,16 @@ Working notes on the implementation layer: patterns in use, non-obvious choices,
 
 <!-- Add entries below. Most recent first. -->
 
+## 2026-04-12 — Authentication
+
+- `ApplicationController`: `require_login` before_action (redirects to `login_path`), `current_user` (session[:user_id] → User lookup), `logged_in?`, and `require_role(*roles)` helper. Both `current_user` and `logged_in?` are exposed as `helper_method`.
+- `SessionsController`: skips `require_login`. `create` looks up by downcased email and calls `authenticate`; sets `session[:user_id]` on success. `destroy` deletes the session key and redirects to login.
+- `User` model: added `before_save { self.email = email.downcase }` to normalize stored emails. Consistent with the case-insensitive uniqueness validation already in place.
+- Routes: `GET /login` → `sessions#new`, `POST /login` → `sessions#create`, `DELETE /logout` → `sessions#destroy`. Root temporarily set to `sessions#new`; will be replaced by `guests#index`.
+- Spec: `spec/requests/sessions_spec.rb` — covers login form render, successful login, case-insensitive email, bad password, unknown email, and logout. Factory note: overriding only `password` without also overriding `password_confirmation` causes `RecordInvalid`; use the factory's default password (`"password123"`) in the request spec.
+- `require_login` will be tested end-to-end once the first non-session protected route (guests#index) exists. The root route currently maps to `sessions#new` which skips `require_login`, so it can't serve as the redirect target test.
+- Suite: 74 examples, 0 failures.
+
 ## 2026-04-11 — Rails scaffold + models
 
 - Rails 7.2.3.1 scaffolded with `rails new . --name=xen_manager --database=sqlite3 --skip-test --skip-bundle`.

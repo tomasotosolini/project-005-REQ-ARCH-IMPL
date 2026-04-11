@@ -1,0 +1,17 @@
+<% content_for :title, "Log in" %>
+
+<h1>Log in</h1>
+
+<%= form_with url: login_path do |f| %>
+  <div>
+    <%= f.label :email %>
+    <%= f.email_field :email, autofocus: true, autocomplete: "email" %>
+  </div>
+
+  <div>
+    <%= f.label :password %>
+    <%= f.password_field :password, autocomplete: "current-password" %>
+  </div>
+
+  <%= f.submit "Log in" %>
+<% end %>
