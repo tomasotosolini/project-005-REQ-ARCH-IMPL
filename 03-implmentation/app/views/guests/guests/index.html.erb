@@ -18,7 +18,7 @@
     <tbody>
       <% @xen_guests.each do |guest| %>
         <tr>
-          <td><%= guest.name %></td>
+          <td><%= link_to guest.name, guest_path(guest.name) %></td>
           <td><%= guest.id %></td>
           <td><%= guest.state %></td>
           <td><%= guest.memory %></td>

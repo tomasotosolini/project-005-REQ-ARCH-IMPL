@@ -3,7 +3,8 @@ Rails.application.routes.draw do
   post "login",  to: "sessions#create"
   delete "logout", to: "sessions#destroy", as: :logout
 
-  get "guests", to: "guests/guests#index", as: :guests
+  get "guests",      to: "guests/guests#index", as: :guests
+  get "guests/:name", to: "guests/guests#show",  as: :guest
   root to: "guests/guests#index"
 
   get "up" => "rails/health#show", as: :rails_health_check

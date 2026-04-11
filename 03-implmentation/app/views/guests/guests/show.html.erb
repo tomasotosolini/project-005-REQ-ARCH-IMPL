@@ -1,0 +1,19 @@
+<% content_for :title, @xen_guest&.name || @db_guest&.xen_name %>
+
+<h1><%= @xen_guest&.name || @db_guest&.xen_name %></h1>
+
+<% if @xen_guest %>
+  <table>
+    <tbody>
+      <tr><th>State</th>       <td><%= @xen_guest.state %></td></tr>
+      <tr><th>Domain ID</th>   <td><%= @xen_guest.id %></td></tr>
+      <tr><th>Memory (MiB)</th><td><%= @xen_guest.memory %></td></tr>
+      <tr><th>vCPUs</th>       <td><%= @xen_guest.vcpus %></td></tr>
+      <tr><th>CPU time (s)</th><td><%= @xen_guest.time %></td></tr>
+    </tbody>
+  </table>
+<% else %>
+  <p>Guest is not currently running.</p>
+<% end %>
+
+<p><%= link_to "Back to guests", guests_path %></p>

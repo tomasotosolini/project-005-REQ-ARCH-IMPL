@@ -39,4 +39,32 @@ RSpec.describe "Guests::Guests", type: :request do
       end
     end
   end
+
+  describe "GET /guests/:name" do
+    context "when authenticated" do
+      before { post login_path, params: { email: user.email, password: "password123" } }
+
+      it "shows the guest detail page" do
+        get guest_path("web01")
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include("web01")
+        expect(response.body).to include("512")   # memory
+        expect(response.body).to include("2")     # vcpus
+      end
+
+      it "redirects with alert when guest is not found in Xen or DB" do
+        get guest_path("nonexistent")
+        expect(response).to redirect_to(guests_path)
+        follow_redirect!
+        expect(response.body).to include("not found")
+      end
+    end
+
+    context "when unauthenticated" do
+      it "redirects to the login page" do
+        get guest_path("web01")
+        expect(response).to redirect_to(login_path)
+      end
+    end
+  end
 end
