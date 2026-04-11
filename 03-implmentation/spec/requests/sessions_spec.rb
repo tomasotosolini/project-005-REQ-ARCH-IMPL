@@ -3,6 +3,14 @@ require "rails_helper"
 RSpec.describe "Sessions", type: :request do
   let!(:user) { create(:user, email: "operator@example.com") }
 
+  # Root now renders guests#index which calls xl. Stub the executor so these
+  # specs don't depend on xl being present in the test environment.
+  before do
+    allow(Xen::Executor).to receive(:run).with("xl", "list").and_return(
+      { stdout: "Name                                        ID   Mem VCPUs\tState\tTime(s)\n", stderr: "", success: true }
+    )
+  end
+
   describe "GET /login" do
     it "renders the login form when not logged in" do
       get login_path

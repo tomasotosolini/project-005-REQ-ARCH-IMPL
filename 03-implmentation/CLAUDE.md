@@ -4,6 +4,16 @@ Working notes on the implementation layer: patterns in use, non-obvious choices,
 
 <!-- Add entries below. Most recent first. -->
 
+## 2026-04-12 — Xen service layer + guests#index
+
+- `Xen::Executor.run(cmd, *args)` — shells out via `Open3.capture3` using an explicit argument array (no shell interpolation). Raises `Xen::CommandError` (with stdout/stderr attached) on non-zero exit.
+- `Xen::GuestRecord` — `Struct` with fields: `name, id, memory, vcpus, state, time`. Lives in `xen/guest_lister.rb` alongside the parser that populates it.
+- `Xen::GuestLister.list` — calls `xl list`, parses tabular output, excludes `Domain-0`. `GuestLister.parse(output)` is the pure parsing path (used directly in tests via stubbed output).
+- `Guests::GuestsController#index` — queries `GuestLister.list` for live Xen data; indexes `Guest.all` by `xen_name` for DB metadata lookup in the view.
+- Root route now wired to `guests/guests#index` (was `home#index`). `HomeController` and its view remain on disk but are no longer routed.
+- Stub pattern for tests: `allow(Xen::Executor).to receive(:run).with("xl", "list").and_return(...)` — avoids any dependency on xl being present. Added to both `guests_spec.rb` and `sessions_spec.rb` (root redirect now hits guests#index).
+- Suite: 79 examples, 0 failures.
+
 ## 2026-04-12 — Login management (home controller + layout nav)
 
 - `HomeController#index` — minimal authenticated landing page; inherits `require_login` from `ApplicationController`. Placeholder until `guests#index` is built.

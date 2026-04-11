@@ -3,7 +3,8 @@ Rails.application.routes.draw do
   post "login",  to: "sessions#create"
   delete "logout", to: "sessions#destroy", as: :logout
 
-  root to: "home#index"
+  get "guests", to: "guests/guests#index", as: :guests
+  root to: "guests/guests#index"
 
   get "up" => "rails/health#show", as: :rails_health_check
   get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker

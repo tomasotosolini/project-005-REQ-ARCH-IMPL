@@ -1,0 +1,30 @@
+<% content_for :title, "Guests" %>
+
+<h1>Guests</h1>
+
+<% if @xen_guests.empty? %>
+  <p>No guests are currently running.</p>
+<% else %>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>ID</th>
+        <th>State</th>
+        <th>Memory (MiB)</th>
+        <th>vCPUs</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @xen_guests.each do |guest| %>
+        <tr>
+          <td><%= guest.name %></td>
+          <td><%= guest.id %></td>
+          <td><%= guest.state %></td>
+          <td><%= guest.memory %></td>
+          <td><%= guest.vcpus %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>
