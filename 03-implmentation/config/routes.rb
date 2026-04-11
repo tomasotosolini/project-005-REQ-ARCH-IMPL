@@ -3,8 +3,7 @@ Rails.application.routes.draw do
   post "login",  to: "sessions#create"
   delete "logout", to: "sessions#destroy", as: :logout
 
-  # root will be replaced by guests#index once that controller exists
-  root to: "sessions#new"
+  root to: "home#index"
 
   get "up" => "rails/health#show", as: :rails_health_check
   get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker

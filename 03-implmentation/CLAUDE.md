@@ -4,6 +4,14 @@ Working notes on the implementation layer: patterns in use, non-obvious choices,
 
 <!-- Add entries below. Most recent first. -->
 
+## 2026-04-12 — Login management (home controller + layout nav)
+
+- `HomeController#index` — minimal authenticated landing page; inherits `require_login` from `ApplicationController`. Placeholder until `guests#index` is built.
+- Root route now wired to `home#index` (was `sessions#new`). Unauthenticated GET / redirects to login.
+- Layout: `<nav>` block renders current user email + logout button (`button_to logout_path, method: :delete`) when `logged_in?`. Hidden on the login page.
+- `sessions#new` guard: redirects to root if already logged in — visiting `/login` while authenticated goes straight to the dashboard.
+- Spec: `sessions_spec.rb` updated — added "redirects to root when already logged in", "re-login is possible after logout", and updated `require_login` block to assert the redirect (root is now protected).
+
 ## 2026-04-12 — Authentication
 
 - `ApplicationController`: `require_login` before_action (redirects to `login_path`), `current_user` (session[:user_id] → User lookup), `logged_in?`, and `require_role(*roles)` helper. Both `current_user` and `logged_in?` are exposed as `helper_method`.

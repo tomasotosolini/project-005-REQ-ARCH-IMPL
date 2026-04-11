@@ -17,6 +17,12 @@
   </head>
 
   <body>
+    <% if logged_in? %>
+      <nav>
+        <%= current_user.email %> &mdash;
+        <%= button_to "Log out", logout_path, method: :delete %>
+      </nav>
+    <% end %>
     <% if notice %>
       <p role="status"><%= notice %></p>
     <% end %>

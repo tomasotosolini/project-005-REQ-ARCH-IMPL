@@ -4,9 +4,15 @@ RSpec.describe "Sessions", type: :request do
   let!(:user) { create(:user, email: "operator@example.com") }
 
   describe "GET /login" do
-    it "renders the login form" do
+    it "renders the login form when not logged in" do
       get login_path
       expect(response).to have_http_status(:ok)
+    end
+
+    it "redirects to root when already logged in" do
+      post login_path, params: { email: "operator@example.com", password: "password123" }
+      get login_path
+      expect(response).to redirect_to(root_path)
     end
   end
 
@@ -53,16 +59,23 @@ RSpec.describe "Sessions", type: :request do
       follow_redirect!
       expect(response.body).to include("Logged out.")
     end
+
+    it "re-login is possible after logout" do
+      delete logout_path
+      post login_path, params: { email: "operator@example.com", password: "password123" }
+      expect(response).to redirect_to(root_path)
+    end
   end
 
   describe "require_login" do
     it "redirects unauthenticated requests to the login page" do
-      # root is protected (sessions#new skips require_login, but root maps to sessions#new
-      # which does skip it — test via a future protected route instead).
-      # For now, verify the session is clear and a direct GET / behaves as login page.
       get root_path
-      # root currently maps to sessions#new which skips require_login, so it renders OK.
-      # This test documents that behaviour; it will be updated when root → guests#index.
+      expect(response).to redirect_to(login_path)
+    end
+
+    it "allows access to root after login" do
+      post login_path, params: { email: "operator@example.com", password: "password123" }
+      get root_path
       expect(response).to have_http_status(:ok)
     end
   end
