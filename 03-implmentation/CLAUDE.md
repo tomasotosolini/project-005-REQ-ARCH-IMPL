@@ -4,6 +4,17 @@ Working notes on the implementation layer: patterns in use, non-obvious choices,
 
 <!-- Add entries below. Most recent first. -->
 
+## 2026-04-11 — Rails scaffold + models
+
+- Rails 7.2.3.1 scaffolded with `rails new . --name=xen_manager --database=sqlite3 --skip-test --skip-bundle`.
+- Directory name (`03-implmentation`) starts with a digit — `--name=xen_manager` is required; without it `rails new` exits with "Invalid application name".
+- `rails new` creates a nested `.git` — must be removed immediately (`rm -rf .git`) to avoid a submodule situation.
+- `spec/spec_helper.rb` was overwritten by `rails generate rspec:install`; the generated version is a superset so no content was lost.
+- `User` model: `has_secure_password` (bcrypt), ROLES constant `%w[admin operator viewer]`, email uniqueness (case-insensitive), email format, role inclusion, `#admin?` helper.
+- `Guest` model: `xen_name` uniqueness + format (`/\A[a-zA-Z0-9_\-]+\z/`). No state stored — Xen is authoritative.
+- FactoryBot used for model specs; factories in `spec/factories/`. `bundler3.1 exec` works freely; new gem installs require user to run bundler (no write perms to `/var/lib/gems/`).
+- Full suite: 67 examples (51 fake xl + 16 model), 0 failures.
+
 ## 2026-04-11 — Dev environment: fake xl
 
 - Chose emulated xl over real Xen for development, even though Xen is present on the host. Reason: isolation, reproducibility, no risk of affecting real guests during dev.
