@@ -4,6 +4,16 @@ Working notes on the implementation layer: patterns in use, non-obvious choices,
 
 <!-- Add entries below. Most recent first. -->
 
+## 2026-04-13 — Guest lifecycle (create/start/stop/destroy)
+
+- `Xen::Lifecycle` service: `create`, `start`, `stop`, `destroy`. `destroy` tolerates "does not exist" from xl (guest already stopped) so config + DB cleanup still runs.
+- Config file location: `ENV["XEN_CONFIG_DIR"]`, defaulting to `tmp/fake-xen/configs` in development and `/etc/xen/managed` in production. No Procfile.dev change needed.
+- Routes added: `GET /guests/new` (before `/:name` to avoid name clash), `POST /guests`, `POST /guests/:name/start`, `POST /guests/:name/stop`, `DELETE /guests/:name`. No second named route for DELETE — `guest_path(name)` with `method: :delete` suffices.
+- Show page shows Stop + Destroy buttons when running; Start + Delete buttons when stopped. Both use `button_to` with `turbo_confirm` for destructive actions.
+- `create` action uses `find_or_create_by!` so re-creating a previously deleted guest doesn't raise.
+- Spec stubs `Xen::Lifecycle` at the service level (not `Executor`) — keeps controller specs clean without file system or xl dependency.
+- Suite: 103 examples, 0 failures.
+
 ## 2026-04-12 — guests#show
 
 - Route: `GET /guests/:name` using `:name` (Xen domain name) rather than a DB id — Xen is authoritative, not the DB.

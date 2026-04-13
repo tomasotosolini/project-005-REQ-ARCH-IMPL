@@ -2,6 +2,8 @@
 
 <h1>Guests</h1>
 
+<p><%= link_to "New guest", new_guest_path %></p>
+
 <% if @xen_guests.empty? %>
   <p>No guests are currently running.</p>
 <% else %>

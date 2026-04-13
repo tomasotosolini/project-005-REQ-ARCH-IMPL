@@ -3,8 +3,14 @@ Rails.application.routes.draw do
   post "login",  to: "sessions#create"
   delete "logout", to: "sessions#destroy", as: :logout
 
-  get "guests",      to: "guests/guests#index", as: :guests
-  get "guests/:name", to: "guests/guests#show",  as: :guest
+  get    "guests/new",          to: "guests/lifecycle#new",     as: :new_guest
+  get    "guests",              to: "guests/guests#index",      as: :guests
+  post   "guests",              to: "guests/lifecycle#create"
+  get    "guests/:name",        to: "guests/guests#show",       as: :guest
+  post   "guests/:name/start",  to: "guests/lifecycle#start",   as: :start_guest
+  post   "guests/:name/stop",   to: "guests/lifecycle#stop",    as: :stop_guest
+  delete "guests/:name",        to: "guests/lifecycle#destroy"
+
   root to: "guests/guests#index"
 
   get "up" => "rails/health#show", as: :rails_health_check

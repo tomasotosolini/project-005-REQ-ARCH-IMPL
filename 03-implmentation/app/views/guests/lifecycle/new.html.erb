@@ -1,0 +1,22 @@
+<% content_for :title, "New Guest" %>
+
+<h1>New Guest</h1>
+
+<%= form_with url: guests_path, method: :post do |f| %>
+  <div>
+    <%= f.label :name, "Name" %>
+    <%= f.text_field :name, required: true, pattern: "[a-zA-Z0-9_\\-]+" %>
+  </div>
+  <div>
+    <%= f.label :memory, "Memory (MiB)" %>
+    <%= f.number_field :memory, value: 512, min: 64, required: true %>
+  </div>
+  <div>
+    <%= f.label :vcpus, "vCPUs" %>
+    <%= f.number_field :vcpus, value: 1, min: 1, required: true %>
+  </div>
+
+  <%= f.submit "Create guest" %>
+<% end %>
+
+<p><%= link_to "Back to guests", guests_path %></p>
