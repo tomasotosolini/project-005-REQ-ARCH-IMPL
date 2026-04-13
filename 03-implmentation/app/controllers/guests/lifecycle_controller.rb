@@ -2,6 +2,8 @@
 
 module Guests
   class LifecycleController < ApplicationController
+    before_action -> { require_role(:admin, :operator) }
+
     def new
     end
 
