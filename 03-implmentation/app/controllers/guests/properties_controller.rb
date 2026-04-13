@@ -2,6 +2,7 @@
 
 module Guests
   class PropertiesController < ApplicationController
+    before_action -> { require_role(:admin, :operator) }
     before_action :load_guest
 
     def edit

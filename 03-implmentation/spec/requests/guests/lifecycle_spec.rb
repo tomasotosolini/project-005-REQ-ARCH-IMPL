@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe "Guests::Lifecycle", type: :request do
-  let!(:user) { create(:user) }
+  let!(:user) { create(:user) }  # operator by default
 
   let(:xl_list_output) do
     <<~XL
@@ -30,6 +30,20 @@ RSpec.describe "Guests::Lifecycle", type: :request do
     context "when unauthenticated" do
       it "redirects to login" do
         delete logout_path
+        get new_guest_path
+        expect(response).to redirect_to(login_path)
+      end
+    end
+
+    context "when logged in as viewer" do
+      let!(:viewer) { create(:user, :viewer) }
+
+      before do
+        delete logout_path
+        post login_path, params: { email: viewer.email, password: "password123" }
+      end
+
+      it "redirects to login with an authorization alert" do
         get new_guest_path
         expect(response).to redirect_to(login_path)
       end
