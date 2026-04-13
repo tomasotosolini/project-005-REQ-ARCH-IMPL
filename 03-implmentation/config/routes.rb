@@ -6,6 +6,8 @@ Rails.application.routes.draw do
   get    "guests/new",          to: "guests/lifecycle#new",     as: :new_guest
   get    "guests",              to: "guests/guests#index",      as: :guests
   post   "guests",              to: "guests/lifecycle#create"
+  get    "guests/:name/properties/edit", to: "guests/properties#edit",   as: :edit_guest_properties
+  patch  "guests/:name/properties",      to: "guests/properties#update",  as: :guest_properties
   get    "guests/:name",        to: "guests/guests#show",       as: :guest
   post   "guests/:name/start",  to: "guests/lifecycle#start",   as: :start_guest
   post   "guests/:name/stop",   to: "guests/lifecycle#stop",    as: :stop_guest
