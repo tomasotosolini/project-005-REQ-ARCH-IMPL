@@ -1,0 +1,30 @@
+<% content_for :title, "Edit Properties — #{@name}" %>
+
+<h1>Edit Properties: <%= @name %></h1>
+
+<% if @running %>
+  <p>Guest is running. Changes to vCPUs and memory will be applied immediately and persisted to the config file.</p>
+<% else %>
+  <p>Guest is stopped. Changes will be saved to the config file and take effect on next start.</p>
+<% end %>
+
+<% if flash[:alert] %>
+  <p><%= flash[:alert] %></p>
+<% end %>
+
+<%= form_with url: guest_properties_path(@name), method: :patch do |f| %>
+  <div>
+    <%= f.label :vcpus, "vCPUs" %>
+    <%= f.number_field :vcpus, value: @current_vcpus, min: 1, required: true %>
+  </div>
+
+  <div>
+    <%= f.label :memory, "Memory (MiB)" %>
+    <%= f.number_field :memory, value: @current_memory, min: 16, required: true %>
+  </div>
+
+  <p>
+    <%= f.submit "Save" %>
+    <%= link_to "Cancel", guest_path(@name) %>
+  </p>
+<% end %>
