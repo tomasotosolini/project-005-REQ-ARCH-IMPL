@@ -4,6 +4,17 @@ Working notes on the implementation layer: patterns in use, non-obvious choices,
 
 <!-- Add entries below. Most recent first. -->
 
+## 2026-04-13 — Guest monitor (SSE / Turbo Streams)
+
+- `Xen::Monitor.snapshot(name)` — thin wrapper around `GuestLister.list`; returns the matching `GuestRecord` or nil when the guest is not running.
+- `Xen::GuestRecord` extracted to its own file `xen/guest_record.rb` so Zeitwerk can autoload it by constant name. Previously defined inline in `guest_lister.rb` alongside the lister — fine at runtime but breaks view specs that reference the struct without first touching `GuestLister`.
+- `Guests::MonitorController#stream` — `ActionController::Live` endpoint. Polls `Xen::Monitor.snapshot` every `POLL_INTERVAL` seconds (env-configurable, default 5). Emits a `text/event-stream` payload: each event is a `<turbo-stream action="replace" target="guest-monitor">` wrapping the rendered `_monitor_panel` partial.
+- `_monitor_panel` partial — renders a stats table when a record is present, or a "not currently running" message when nil.
+- Show page wired with `<turbo-stream-source src="...">` pointing at `monitor_guest_path(name)`. The `#guest-monitor` div is rendered server-side on page load (initial state) and then replaced live by the SSE stream.
+- Route: `GET /guests/:name/monitor` → `guests/monitor#stream`, named `monitor_guest`.
+- Testing strategy: `ActionController::Live` body chunks are not captured by Rack::Test (`response.body` returns `""`). Request spec covers auth redirect + `Content-Type` header only. Content rendering is covered by a dedicated view spec for `_monitor_panel`.
+- Suite: 112 examples, 0 failures.
+
 ## 2026-04-13 — Guest lifecycle (create/start/stop/destroy)
 
 - `Xen::Lifecycle` service: `create`, `start`, `stop`, `destroy`. `destroy` tolerates "does not exist" from xl (guest already stopped) so config + DB cleanup still runs.

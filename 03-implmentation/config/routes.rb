@@ -6,6 +6,7 @@ Rails.application.routes.draw do
   get    "guests/new",          to: "guests/lifecycle#new",     as: :new_guest
   get    "guests",              to: "guests/guests#index",      as: :guests
   post   "guests",              to: "guests/lifecycle#create"
+  get    "guests/:name/monitor", to: "guests/monitor#stream",    as: :monitor_guest
   get    "guests/:name",        to: "guests/guests#show",       as: :guest
   post   "guests/:name/start",  to: "guests/lifecycle#start",   as: :start_guest
   post   "guests/:name/stop",   to: "guests/lifecycle#stop",    as: :stop_guest
