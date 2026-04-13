@@ -1,0 +1,13 @@
+<% if guest %>
+  <table>
+    <tbody>
+      <tr><th>State</th>        <td><%= guest.state %></td></tr>
+      <tr><th>Domain ID</th>    <td><%= guest.id %></td></tr>
+      <tr><th>Memory (MiB)</th> <td><%= guest.memory %></td></tr>
+      <tr><th>vCPUs</th>        <td><%= guest.vcpus %></td></tr>
+      <tr><th>CPU time (s)</th> <td><%= guest.time %></td></tr>
+    </tbody>
+  </table>
+<% else %>
+  <p>Guest is not currently running.</p>
+<% end %>

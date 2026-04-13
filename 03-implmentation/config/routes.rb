@@ -6,6 +6,7 @@ Rails.application.routes.draw do
   get    "guests/new",          to: "guests/lifecycle#new",     as: :new_guest
   get    "guests",              to: "guests/guests#index",      as: :guests
   post   "guests",              to: "guests/lifecycle#create"
+  get    "guests/:name/monitor", to: "guests/monitor#stream",    as: :monitor_guest
   get    "guests/:name/properties/edit", to: "guests/properties#edit",   as: :edit_guest_properties
   patch  "guests/:name/properties",      to: "guests/properties#update",  as: :guest_properties
   get    "guests/:name",        to: "guests/guests#show",       as: :guest

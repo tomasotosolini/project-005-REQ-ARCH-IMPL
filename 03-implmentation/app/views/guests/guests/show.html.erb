@@ -3,25 +3,20 @@
 <% name = @xen_guest&.name || @db_guest&.xen_name %>
 <h1><%= name %></h1>
 
-<% if @xen_guest %>
-  <table>
-    <tbody>
-      <tr><th>State</th>       <td><%= @xen_guest.state %></td></tr>
-      <tr><th>Domain ID</th>   <td><%= @xen_guest.id %></td></tr>
-      <tr><th>Memory (MiB)</th><td><%= @xen_guest.memory %></td></tr>
-      <tr><th>vCPUs</th>       <td><%= @xen_guest.vcpus %></td></tr>
-      <tr><th>CPU time (s)</th><td><%= @xen_guest.time %></td></tr>
-    </tbody>
-  </table>
+<%# SSE source: Turbo connects and feeds the #guest-monitor target. %>
+<turbo-stream-source src="<%= monitor_guest_path(name) %>"></turbo-stream-source>
 
+<div id="guest-monitor">
+  <%= render partial: "monitor_panel", locals: { guest: @xen_guest, name: name } %>
+</div>
+
+<% if @xen_guest %>
   <p>
     <%= button_to "Stop",    stop_guest_path(name),  method: :post %>
     <%= button_to "Destroy", guest_path(name),        method: :delete,
         data: { turbo_confirm: "Force-destroy #{name}? This cannot be undone." } %>
   </p>
-<% else %>
-  <p>Guest is not currently running.</p>
-
+<% elsif @db_guest %>
   <p>
     <%= button_to "Start",   start_guest_path(name), method: :post %>
     <%= button_to "Delete",  guest_path(name),        method: :delete,
