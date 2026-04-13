@@ -14,6 +14,10 @@ Rails.application.routes.draw do
   post   "guests/:name/stop",   to: "guests/lifecycle#stop",    as: :stop_guest
   delete "guests/:name",        to: "guests/lifecycle#destroy"
 
+  namespace :admin do
+    resources :users
+  end
+
   root to: "guests/guests#index"
 
   get "up" => "rails/health#show", as: :rails_health_check
