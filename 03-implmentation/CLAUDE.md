@@ -4,6 +4,15 @@ Working notes on the implementation layer: patterns in use, non-obvious choices,
 
 <!-- Add entries below. Most recent first. -->
 
+## 2026-04-13 — Admin area (user CRUD)
+
+- `Admin::UsersController` — index, new/create, edit/update, destroy. Scoped under `namespace :admin`.
+- `require_admin` before-action calls the existing `require_role(:admin)` helper — non-admin users are redirected to `login_path` with an alert.
+- Destroy guard: admin cannot delete their own account (checked against `current_user`); shows an alert and redirects to the index.
+- Password on edit: `update_params` strips blank `password` / `password_confirmation` keys so the digest is not overwritten when the admin leaves the fields empty.
+- Nav: "Admin" link added to the layout, visible only when `current_user.admin?`.
+- Suite: 147 examples, 0 failures.
+
 ## 2026-04-13 — Guest monitor (SSE / Turbo Streams)
 
 - `Xen::Monitor.snapshot(name)` — thin wrapper around `GuestLister.list`; returns the matching `GuestRecord` or nil when the guest is not running.
