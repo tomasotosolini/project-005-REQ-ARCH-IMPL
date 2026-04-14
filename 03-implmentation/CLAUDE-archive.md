@@ -1,15 +1,6 @@
-# Implementation — Claude's Notes (Archive)
+# Implementation — Archive
 
-# Full history of changes
-
-## 2026-04-13 — Admin area (user CRUD)
-
-- `Admin::UsersController` — index, new/create, edit/update, destroy. Scoped under `namespace :admin`.
-- `require_admin` before-action calls the existing `require_role(:admin)` helper — non-admin users are redirected to `login_path` with an alert.
-- Destroy guard: admin cannot delete their own account (checked against `current_user`); shows an alert and redirects to the index.
-- Password on edit: `update_params` strips blank `password` / `password_confirmation` keys so the digest is not overwritten when the admin leaves the fields empty.
-- Nav: "Admin" link added to the layout, visible only when `current_user.admin?`.
-- Suite: 147 examples, 0 failures.
+Historical implementation notes. See `CLAUDE.md` for the two most recent entries.
 
 ## 2026-04-13 — Guest monitor (SSE / Turbo Streams)
 
