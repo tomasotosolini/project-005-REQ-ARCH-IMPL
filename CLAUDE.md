@@ -46,8 +46,18 @@ Each layer directory contains two companion files:
 
 The section "Changes history" of the two files mentioned below:
 
-`03-implmentation/CLAUDE.md` — must contain only the 2 most recent items, newest first. When adding new item on top, first make sure there is no more than one item already listed, otherwise remove older one (last).
-`03-implmentation/CLAUDE-archive.md` — full history, newest first, append new on top. Loaded when necessary.
+`03-implmentation/CLAUDE.md` (RECENT):
+    - Must contain only the 2 most recent items
+    - Newest items on top
+    - Procedure for adding new items:
+        1. Add new item on top
+        2. If item count exceeds 2, move the oldest (last) item to `03-implmentation/CLAUDE-archive.md`
+
+`03-implmentation/CLAUDE-archive.md` (LESS RECENT):
+    - Must contain all non recent items
+    - Newest items on top
+    - Procedure for adding new items: just add new item on top
+    - Loaded only when necessary.
 
 ## Implementation standard workflow
 
