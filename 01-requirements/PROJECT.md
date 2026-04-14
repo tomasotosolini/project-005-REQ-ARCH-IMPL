@@ -8,7 +8,10 @@ Roles are hardcoded in the application (not user-configurable).
 Every user must have a role assigned.
 Role definitions and their entitlements will be specified later.
 Allows to create/destroy/start/stop/monitor Xen guests (except dom0), and modify a fixed subset of guest properties: CPU, memory, disk, and network configuration.
-This is intentionally a simplified management interface. Monitoring covers basic guest status (running/stopped) and real-time CPU and memory usage.
+This is intentionally a simplified management interface.
+Guest listing allows:
+ - see list of all registered guests with config details
+ - see list of running guests along with config detail and actual resources usage
 
 ## Entitlements
 
