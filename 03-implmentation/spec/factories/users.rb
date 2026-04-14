@@ -3,14 +3,14 @@ FactoryBot.define do
     sequence(:email) { |n| "user#{n}@example.com" }
     password { "password123" }
     password_confirmation { "password123" }
-    role { "operator" }
+    role { "user" }
 
     trait :admin do
       role { "admin" }
     end
 
-    trait :viewer do
-      role { "viewer" }
+    trait :guest_role do
+      role { "guest" }
     end
   end
 end

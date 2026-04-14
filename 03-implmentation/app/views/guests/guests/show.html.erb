@@ -12,17 +12,27 @@
 
 <% if @xen_guest %>
   <p>
-    <%= button_to "Stop",    stop_guest_path(name),  method: :post %>
-    <%= button_to "Destroy", guest_path(name),        method: :delete,
-        data: { turbo_confirm: "Force-destroy #{name}? This cannot be undone." } %>
+    <% if current_user.has_grant?(:activator) %>
+      <%= button_to "Stop",    stop_guest_path(name),  method: :post %>
+    <% end %>
+    <% if current_user.has_grant?(:creator) %>
+      <%= button_to "Destroy", guest_path(name),        method: :delete,
+          data: { turbo_confirm: "Force-destroy #{name}? This cannot be undone." } %>
+    <% end %>
   </p>
 <% elsif @db_guest %>
   <p>
-    <%= button_to "Start",   start_guest_path(name), method: :post %>
-    <%= button_to "Delete",  guest_path(name),        method: :delete,
-        data: { turbo_confirm: "Delete #{name}? This cannot be undone." } %>
+    <% if current_user.has_grant?(:activator) %>
+      <%= button_to "Start",   start_guest_path(name), method: :post %>
+    <% end %>
+    <% if current_user.has_grant?(:creator) %>
+      <%= button_to "Delete",  guest_path(name),        method: :delete,
+          data: { turbo_confirm: "Delete #{name}? This cannot be undone." } %>
+    <% end %>
   </p>
 <% end %>
 
-<p><%= link_to "Edit Properties", edit_guest_properties_path(name) %></p>
+<% if current_user.has_grant?(:editor) %>
+  <p><%= link_to "Edit Properties", edit_guest_properties_path(name) %></p>
+<% end %>
 <p><%= link_to "Back to guests", guests_path %></p>

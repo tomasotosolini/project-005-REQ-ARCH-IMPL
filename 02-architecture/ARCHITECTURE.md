@@ -66,7 +66,26 @@ app/
 | role | string | validated against hardcoded role list |
 | created_at / updated_at | datetime | |
 
-Roles are a fixed enum defined in the `User` model. Role definitions and per-role entitlements will be added once specified in requirements.
+Roles are a fixed enum defined in the `User` model. Each role maps to a set of grants; grants are the unit of authorization throughout the application.
+
+**Grants** (constants in `User::GRANTS`):
+
+| Constant | Actions covered |
+|---|---|
+| `:creator` | create, destroy VM |
+| `:activator` | start, stop VM |
+| `:monitor` | view VM status and monitoring |
+| `:editor` | modify VM config (CPU, memory, disk, network) |
+
+**Role → grant mapping** (defined in `User::ROLE_GRANTS`):
+
+| Role | Grants |
+|---|---|
+| `guest` | `:monitor` |
+| `user` | `:monitor`, `:activator` |
+| `admin` | `:creator`, `:activator`, `:monitor`, `:editor` |
+
+Adding a new grant or role requires only updating these two constants — no other structural change.
 
 ### `guests` table
 
@@ -87,7 +106,8 @@ Additional metadata columns (display name, notes, owner) may be added when the c
 - Session-based authentication. Rails signed cookie session; no token/JWT.
 - `has_secure_password` handles bcrypt hashing.
 - `ApplicationController` enforces `require_login` before action on all controllers except `SessionsController`.
-- Role checks are enforced at the controller level via a `require_role` helper. Roles are hardcoded constants in `User::ROLES`. Entitlement logic will be added once role definitions are provided.
+- Authorization is grant-based. `User#has_grant?(grant)` checks whether the user's role includes the given grant. Controllers call `require_grant(grant)` (defined in `ApplicationController`) which redirects with a 403 if the check fails.
+- `require_role` is retired in favour of `require_grant` for all action-level checks. The admin area keeps a `require_grant(:creator)` guard (admin role is the only role with `:creator`), which is equivalent and more semantically precise.
 
 ---
 
@@ -163,7 +183,7 @@ Covers:
 
 ## Open Questions
 
-1. **Role definitions and entitlements** — not yet specified in requirements. Architecture assumes a simple `require_role` check per controller action; this will be refined once roles are defined.
+1. ~~**Role definitions and entitlements**~~ — resolved. See Data Model and Authentication & Authorization sections above.
 2. **Guest creation workflow** — the set of configurable parameters at creation time is not yet specified. Assumed to be the same fixed subset (CPU, memory, disk, network) plus a name.
 3. **Network configuration** — "network configuration" scope is unclear. Assumed to mean attaching/detaching virtual interfaces and selecting the bridge; not host-level network changes.
 4. **Disk configuration** — assumed to mean resizing existing virtual disks or attaching/detaching block devices; not host storage pool management.

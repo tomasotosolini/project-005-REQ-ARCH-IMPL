@@ -61,4 +61,34 @@ RSpec.describe User, type: :model do
       end
     end
   end
+
+  describe "#has_grant?" do
+    it "guest has only :monitor" do
+      user.role = "guest"
+      expect(user.has_grant?(:monitor)).to be true
+      expect(user.has_grant?(:activator)).to be false
+      expect(user.has_grant?(:creator)).to be false
+      expect(user.has_grant?(:editor)).to be false
+    end
+
+    it "user has :monitor and :activator" do
+      user.role = "user"
+      expect(user.has_grant?(:monitor)).to be true
+      expect(user.has_grant?(:activator)).to be true
+      expect(user.has_grant?(:creator)).to be false
+      expect(user.has_grant?(:editor)).to be false
+    end
+
+    it "admin has all grants" do
+      user.role = "admin"
+      User::GRANTS.each do |grant|
+        expect(user.has_grant?(grant)).to be true
+      end
+    end
+
+    it "accepts string grant names" do
+      user.role = "admin"
+      expect(user.has_grant?("creator")).to be true
+    end
+  end
 end

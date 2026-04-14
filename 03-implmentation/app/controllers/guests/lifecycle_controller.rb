@@ -2,7 +2,8 @@
 
 module Guests
   class LifecycleController < ApplicationController
-    before_action -> { require_role(:admin, :operator) }
+    before_action -> { require_grant(:creator) },   only: %i[new create destroy]
+    before_action -> { require_grant(:activator) },  only: %i[start stop]
 
     def new
     end
