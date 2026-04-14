@@ -1,9 +1,5 @@
 # Architecture — Claude's Notes
 
-Working notes on the architecture layer: design decisions, rejected alternatives, constraints that shaped the design, and anything worth remembering across sessions.
-
-<!-- Add entries below. Most recent first. -->
-
 ## 2026-04-11 — Initial architecture created
 
 - First architecture document written from `01-requirements/PROJECT.md`.

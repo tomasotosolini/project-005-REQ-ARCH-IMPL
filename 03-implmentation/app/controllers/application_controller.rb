@@ -2,7 +2,10 @@ class ApplicationController < ActionController::Base
   # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
   allow_browser versions: :modern
 
+  SESSION_IDLE_TIMEOUT = ENV.fetch("SESSION_IDLE_TIMEOUT_MINUTES", "30").to_i.minutes
+
   before_action :require_login
+  before_action :enforce_session_idle_timeout
 
   private
 
@@ -18,6 +21,17 @@ class ApplicationController < ActionController::Base
 
   def require_login
     redirect_to login_path, alert: "Please log in." unless logged_in?
+  end
+
+  def enforce_session_idle_timeout
+    return unless session[:user_id]
+
+    if session[:last_seen_at] && Time.current > Time.zone.parse(session[:last_seen_at]) + SESSION_IDLE_TIMEOUT
+      reset_session
+      redirect_to login_path, alert: "Your session expired due to inactivity. Please log in again."
+    else
+      session[:last_seen_at] = Time.current.to_s
+    end
   end
 
   def require_role(*roles)

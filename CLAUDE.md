@@ -42,6 +42,11 @@ Each layer directory contains two companion files:
 
 **Session instruction:** At the start of each session, read the `USER.md` in every layer directory that is relevant to the current task, in addition to the `CLAUDE.md` files that are auto-loaded.
 
+## Implementation changes archive
+
+File `03-implmentation/CLAUDE.md` contains a last 2 modifications memory.
+File `03-implmentation/CLAUDE-archive.md` to be used only for historical memory of modifications.
+
 ## Implementation standard workflow
 
 ### Precondition
