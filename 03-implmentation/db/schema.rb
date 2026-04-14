@@ -10,11 +10,12 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_04_11_215315) do
+ActiveRecord::Schema[7.2].define(version: 2026_04_14_054317) do
   create_table "guests", force: :cascade do |t|
     t.string "xen_name"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "pending_operation"
     t.index ["xen_name"], name: "index_guests_on_xen_name", unique: true
   end
 

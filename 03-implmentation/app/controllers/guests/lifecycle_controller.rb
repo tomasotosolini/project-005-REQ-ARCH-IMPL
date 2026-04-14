@@ -17,37 +17,38 @@ module Guests
         return render :new, status: :unprocessable_entity
       end
 
-      Xen::Lifecycle.create(name: name, memory: memory, vcpus: vcpus)
-      Guest.find_or_create_by!(xen_name: name)
-      redirect_to guest_path(name), notice: "Guest '#{name}' created and started."
-    rescue Xen::CommandError => e
-      flash.now[:alert] = "Could not create guest: #{e.stderr.presence || e.message}"
+      guest = Guest.find_or_create_by!(xen_name: name)
+      guest.update!(pending_operation: "creating")
+      GuestOperationJob.perform_later(name, "create", memory: memory, vcpus: vcpus)
+      redirect_to guest_path(name), notice: "Guest '#{name}' is being created."
+    rescue ActiveRecord::RecordInvalid => e
+      flash.now[:alert] = "Could not create guest: #{e.message}"
       render :new, status: :unprocessable_entity
     end
 
     def start
       name = params[:name]
-      Xen::Lifecycle.start(name)
-      redirect_to guest_path(name), notice: "Guest '#{name}' started."
-    rescue Xen::CommandError => e
-      redirect_to guest_path(params[:name]), alert: "Could not start guest: #{e.stderr.presence || e.message}"
+      guest = Guest.find_or_create_by!(xen_name: name)
+      guest.update!(pending_operation: "starting")
+      GuestOperationJob.perform_later(name, "start")
+      redirect_to guest_path(name), notice: "Guest '#{name}' is starting."
     end
 
     def stop
       name = params[:name]
-      Xen::Lifecycle.stop(name)
-      redirect_to guest_path(name), notice: "Guest '#{name}' stopped."
-    rescue Xen::CommandError => e
-      redirect_to guest_path(params[:name]), alert: "Could not stop guest: #{e.stderr.presence || e.message}"
+      guest = Guest.find_or_create_by!(xen_name: name)
+      guest.update!(pending_operation: "stopping")
+      GuestOperationJob.perform_later(name, "stop")
+      redirect_to guest_path(name), notice: "Guest '#{name}' is stopping."
     end
 
     def destroy
       name = params[:name]
-      Xen::Lifecycle.destroy(name)
-      Guest.find_by(xen_name: name)&.destroy
-      redirect_to guests_path, notice: "Guest '#{name}' deleted."
-    rescue Xen::CommandError => e
-      redirect_to guest_path(name), alert: "Could not delete guest: #{e.stderr.presence || e.message}"
+      if (guest = Guest.find_by(xen_name: name))
+        guest.update!(pending_operation: "destroying")
+      end
+      GuestOperationJob.perform_later(name, "destroy")
+      redirect_to guests_path, notice: "Guest '#{name}' is being deleted."
     end
   end
 end

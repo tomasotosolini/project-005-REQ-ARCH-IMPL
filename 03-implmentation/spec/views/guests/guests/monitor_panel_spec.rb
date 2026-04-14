@@ -7,8 +7,8 @@ RSpec.describe "guests/guests/_monitor_panel", type: :view do
     )
   end
 
-  context "with a running guest" do
-    before { render partial: "guests/guests/monitor_panel", locals: { guest: guest_record, name: "web01" } }
+  context "with a running guest and no pending operation" do
+    before { render partial: "guests/guests/monitor_panel", locals: { guest: guest_record, name: "web01", pending: nil } }
 
     it "displays the guest memory" do
       expect(rendered).to include("512")
@@ -25,10 +25,23 @@ RSpec.describe "guests/guests/_monitor_panel", type: :view do
     it "displays the domain ID" do
       expect(rendered).to include("1")
     end
+
+    it "does not show a pending notice" do
+      expect(rendered).not_to include("in progress")
+    end
+  end
+
+  context "with a pending operation" do
+    before { render partial: "guests/guests/monitor_panel", locals: { guest: guest_record, name: "web01", pending: "stopping" } }
+
+    it "shows the pending operation notice" do
+      expect(rendered).to include("stopping")
+      expect(rendered).to include("in progress")
+    end
   end
 
   context "with a stopped guest (nil)" do
-    before { render partial: "guests/guests/monitor_panel", locals: { guest: nil, name: "web01" } }
+    before { render partial: "guests/guests/monitor_panel", locals: { guest: nil, name: "web01", pending: nil } }
 
     it "shows the not-running message" do
       expect(rendered).to include("not currently running")

@@ -20,10 +20,11 @@ module Guests
       name = params[:name]
 
       loop do
-        guest = Xen::Monitor.snapshot(name)
-        html  = render_to_string(
+        guest   = Xen::Monitor.snapshot(name)
+        pending = Guest.find_by(xen_name: name)&.pending_operation
+        html    = render_to_string(
           partial: "guests/guests/monitor_panel",
-          locals:  { guest: guest, name: name }
+          locals:  { guest: guest, name: name, pending: pending }
         )
         turbo = %(<turbo-stream action="replace" target="guest-monitor">)
         turbo << "<template>#{html}</template></turbo-stream>"
