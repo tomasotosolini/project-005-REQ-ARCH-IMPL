@@ -87,4 +87,33 @@ RSpec.describe "Sessions", type: :request do
       expect(response).to have_http_status(:ok)
     end
   end
+
+  describe "idle session timeout" do
+    before do
+      post login_path, params: { email: "operator@example.com", password: "password123" }
+    end
+
+    it "allows access when the session is within the idle timeout window" do
+      get root_path
+      expect(response).to have_http_status(:ok)
+    end
+
+    it "expires the session and redirects to login after the idle timeout elapses" do
+      get root_path  # seeds last_seen_at
+
+      travel_to((ApplicationController::SESSION_IDLE_TIMEOUT + 1.minute).from_now) do
+        get root_path
+        expect(response).to redirect_to(login_path)
+        follow_redirect!
+        expect(response.body).to include("session expired")
+      end
+    end
+
+    it "updates last_seen_at on each authenticated request" do
+      freeze_time do
+        get root_path
+        expect(session[:last_seen_at]).to eq(Time.current.to_s)
+      end
+    end
+  end
 end
