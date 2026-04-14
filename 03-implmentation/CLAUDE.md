@@ -4,6 +4,18 @@ Working notes on the implementation layer: patterns in use, non-obvious choices,
 
 ## Changes history (RECENT)
 
+### 2026-04-14 — Disk and network property configuration
+
+- `app/services/xen/lifecycle.rb` — `generate_config` and `create` now accept optional `disk:` (full xl spec, e.g. `phy:/dev/vg0/name,xvda,rw`) and `vif_bridge:` (bridge name). Lines are only emitted when the values are present.
+- `app/services/xen/properties.rb` — `update_config` extended with `disk:` and `vif_bridge:` kwargs; `read_config` now parses both from the config file and returns them alongside vcpus/memory.
+- `app/jobs/guest_operation_job.rb` — `perform` accepts `disk:` and `vif_bridge:` and forwards them to `Xen::Lifecycle.create`.
+- `app/controllers/guests/lifecycle_controller.rb` — `create` extracts `disk` and `vif_bridge` params and passes them to the job.
+- `app/controllers/guests/properties_controller.rb` — `load_guest` reads disk/vif from config (always, since xl list doesn't expose them); `update` enforces a stopped-only guard when disk or vif_bridge values change.
+- `app/views/guests/lifecycle/new.html.erb` — added disk spec and vif bridge fields (both optional).
+- `app/views/guests/properties/edit.html.erb` — added disk and vif_bridge fields; fields are HTML-disabled and labeled "Stop guest to change" when the guest is running.
+- Specs updated: `properties_spec.rb` (read_config stub extended, new running-guard and stopped-change examples), `lifecycle_spec.rb` (create job matcher updated, disk/vif example added), `guest_operation_job_spec.rb` (create expectation updated, disk/vif passthrough example added).
+- Suite: 169 examples, 0 failures.
+
 ### 2026-04-14 — GuestOperationJob (async lifecycle)
 
 - `config/environments/development.rb` — `:async` queue adapter (background threads, no extra process).
@@ -19,11 +31,4 @@ Working notes on the implementation layer: patterns in use, non-obvious choices,
 - `spec/views/guests/guests/monitor_panel_spec.rb` — updated to pass `pending:` local; added pending-notice example.
 - Suite: 161 examples, 0 failures.
 
-### 2026-04-14 — Session expiry
-
-- `config/initializers/session_store.rb` — explicit `:cookie_store` with `expire_after` (default 8h, env `SESSION_ABSOLUTE_TTL_HOURS`), `same_site: :lax`, `secure: true` in production only.
-- `ApplicationController#enforce_session_idle_timeout` — before-action; checks `session[:last_seen_at]` on every authenticated request. Calls `reset_session` and redirects to `login_path` if idle window exceeded (default 30 min, env `SESSION_IDLE_TIMEOUT_MINUTES`). Updates `last_seen_at` on every passing request.
-- `spec/rails_helper.rb` — added `config.include ActiveSupport::Testing::TimeHelpers` (required for `travel_to` / `freeze_time` in request specs).
-- 3 new examples in `sessions_spec.rb`: within-window access, idle expiry via `travel_to`, `last_seen_at` stamp via `freeze_time`.
-- Suite: 152 examples, 0 failures.
 

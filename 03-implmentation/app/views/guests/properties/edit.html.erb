@@ -3,7 +3,7 @@
 <h1>Edit Properties: <%= @name %></h1>
 
 <% if @running %>
-  <p>Guest is running. Changes to vCPUs and memory will be applied immediately and persisted to the config file.</p>
+  <p>Guest is running. Changes to vCPUs and memory will be applied immediately and persisted to the config file. Disk and network fields are disabled — stop the guest first to change them.</p>
 <% else %>
   <p>Guest is stopped. Changes will be saved to the config file and take effect on next start.</p>
 <% end %>
@@ -21,6 +21,20 @@
   <div>
     <%= f.label :memory, "Memory (MiB)" %>
     <%= f.number_field :memory, value: @current_memory, min: 16, required: true %>
+  </div>
+
+  <div>
+    <%= f.label :disk, "Disk (xl spec, e.g. phy:/dev/vg0/web01,xvda,rw)" %>
+    <%= f.text_field :disk, value: @current_disk, disabled: @running,
+                            placeholder: "phy:/dev/vg0/#{@name},xvda,rw" %>
+    <% if @running %><small>Stop guest to change.</small><% end %>
+  </div>
+
+  <div>
+    <%= f.label :vif_bridge, "Network bridge (e.g. xenbr0)" %>
+    <%= f.text_field :vif_bridge, value: @current_vif_bridge, disabled: @running,
+                                  placeholder: "xenbr0" %>
+    <% if @running %><small>Stop guest to change.</small><% end %>
   </div>
 
   <p>

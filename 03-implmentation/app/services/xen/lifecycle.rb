@@ -16,10 +16,11 @@ module Xen
     end
 
     # Writes a config file and starts the guest. Returns the config file path.
-    def self.create(name:, memory:, vcpus:)
+    def self.create(name:, memory:, vcpus:, disk: nil, vif_bridge: nil)
       FileUtils.mkdir_p(CONFIG_DIR)
       path = config_path(name)
-      File.write(path, generate_config(name: name, memory: memory, vcpus: vcpus))
+      File.write(path, generate_config(name: name, memory: memory, vcpus: vcpus,
+                                       disk: disk, vif_bridge: vif_bridge))
       Executor.run("xl", "create", path)
       path
     end
@@ -47,12 +48,14 @@ module Xen
       File.delete(path) if File.exist?(path)
     end
 
-    def self.generate_config(name:, memory:, vcpus:)
-      <<~CFG
-        name   = "#{name}"
-        memory = #{memory}
-        vcpus  = #{vcpus}
-      CFG
+    def self.generate_config(name:, memory:, vcpus:, disk: nil, vif_bridge: nil)
+      lines = []
+      lines << %(name   = "#{name}")
+      lines << "memory = #{memory}"
+      lines << "vcpus  = #{vcpus}"
+      lines << "disk   = ['#{disk}']"            if disk.present?
+      lines << "vif    = ['bridge=#{vif_bridge}']" if vif_bridge.present?
+      lines.join("\n") + "\n"
     end
   end
 end
