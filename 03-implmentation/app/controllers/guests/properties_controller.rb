@@ -9,8 +9,10 @@ module Guests
     end
 
     def update
-      vcpus  = params[:vcpus].to_i
-      memory = params[:memory].to_i
+      vcpus      = params[:vcpus].to_i
+      memory     = params[:memory].to_i
+      disk       = params[:disk].to_s.strip.presence
+      vif_bridge = params[:vif_bridge].to_s.strip.presence
 
       if vcpus < 1
         flash.now[:alert] = "vCPUs must be at least 1."
@@ -22,12 +24,19 @@ module Guests
         return render :edit, status: :unprocessable_entity
       end
 
+      # Disk and network changes are config-only and require the guest to be stopped.
+      if @running && (disk != @current_disk || vif_bridge != @current_vif_bridge)
+        flash.now[:alert] = "Disk and network can only be changed while the guest is stopped."
+        return render :edit, status: :unprocessable_entity
+      end
+
       if @running
         Xen::Properties.vcpu_set(@name, vcpus)
         Xen::Properties.mem_set(@name, memory)
       end
 
-      Xen::Properties.update_config(@name, vcpus: vcpus, memory: memory)
+      Xen::Properties.update_config(@name, vcpus: vcpus, memory: memory,
+                                    disk: disk, vif_bridge: vif_bridge)
       redirect_to guest_path(@name), notice: "Properties updated for '#{@name}'."
     rescue Xen::CommandError => e
       flash.now[:alert] = "Could not update properties: #{e.stderr.presence || e.message}"
@@ -42,15 +51,20 @@ module Guests
       @db_guest  = Guest.find_by(xen_name: @name)
       @running   = @xen_guest.present?
 
-      # Current values: prefer live Xen data, fall back to config file.
+      # CPU/memory: prefer live Xen data when running, fall back to config file.
+      # Disk/network: always read from config file (Xen does not expose them via xl list).
+      config = Xen::Properties.read_config(@name)
+
       if @xen_guest
         @current_vcpus  = @xen_guest.vcpus
         @current_memory = @xen_guest.memory
       else
-        config = Xen::Properties.read_config(@name)
         @current_vcpus  = config&.dig(:vcpus)
         @current_memory = config&.dig(:memory)
       end
+
+      @current_disk       = config&.dig(:disk)
+      @current_vif_bridge = config&.dig(:vif_bridge)
 
       unless @xen_guest || @db_guest
         redirect_to guests_path, alert: "Guest '#{@name}' not found."

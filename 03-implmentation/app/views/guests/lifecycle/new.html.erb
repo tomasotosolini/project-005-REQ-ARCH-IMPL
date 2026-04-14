@@ -15,6 +15,14 @@
     <%= f.label :vcpus, "vCPUs" %>
     <%= f.number_field :vcpus, value: 1, min: 1, required: true %>
   </div>
+  <div>
+    <%= f.label :disk, "Disk (xl spec, e.g. phy:/dev/vg0/myguest,xvda,rw)" %>
+    <%= f.text_field :disk, placeholder: "phy:/dev/vg0/myguest,xvda,rw" %>
+  </div>
+  <div>
+    <%= f.label :vif_bridge, "Network bridge (e.g. xenbr0)" %>
+    <%= f.text_field :vif_bridge, placeholder: "xenbr0" %>
+  </div>
 
   <%= f.submit "Create guest" %>
 <% end %>

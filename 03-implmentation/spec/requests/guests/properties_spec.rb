@@ -29,13 +29,26 @@ RSpec.describe "Guests::Properties", type: :request do
       allow(Xen::Executor).to receive(:run).with("xl", "list").and_return(
         { stdout: xl_list_running, stderr: "", success: true }
       )
+      allow(Xen::Properties).to receive(:read_config).with("web01").and_return(
+        { vcpus: nil, memory: nil, disk: "phy:/dev/vg0/web01,xvda,rw", vif_bridge: "xenbr0" }
+      )
     end
 
     it "renders the edit form with current Xen values" do
       get edit_guest_properties_path("web01")
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("512")  # memory
-      expect(response.body).to include("2")    # vcpus
+      expect(response.body).to include("512")  # memory from xl list
+      expect(response.body).to include("2")    # vcpus from xl list
+    end
+
+    it "shows the disk spec from the config file" do
+      get edit_guest_properties_path("web01")
+      expect(response.body).to include("phy:/dev/vg0/web01,xvda,rw")
+    end
+
+    it "shows the vif bridge from the config file" do
+      get edit_guest_properties_path("web01")
+      expect(response.body).to include("xenbr0")
     end
 
     it "notes that the guest is running" do
@@ -76,7 +89,7 @@ RSpec.describe "Guests::Properties", type: :request do
         { stdout: xl_list_empty, stderr: "", success: true }
       )
       allow(Xen::Properties).to receive(:read_config).with("web01").and_return(
-        { vcpus: 2, memory: 512 }
+        { vcpus: 2, memory: 512, disk: "phy:/dev/vg0/web01,xvda,rw", vif_bridge: "xenbr0" }
       )
     end
 
@@ -85,6 +98,12 @@ RSpec.describe "Guests::Properties", type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("512")
       expect(response.body).to include("2")
+    end
+
+    it "shows disk and vif values from the config file" do
+      get edit_guest_properties_path("web01")
+      expect(response.body).to include("phy:/dev/vg0/web01,xvda,rw")
+      expect(response.body).to include("xenbr0")
     end
 
     it "notes that the guest is stopped" do
@@ -100,34 +119,66 @@ RSpec.describe "Guests::Properties", type: :request do
       allow(Xen::Executor).to receive(:run).with("xl", "list").and_return(
         { stdout: xl_list_running, stderr: "", success: true }
       )
+      allow(Xen::Properties).to receive(:read_config).with("web01").and_return(
+        { vcpus: nil, memory: nil, disk: "phy:/dev/vg0/web01,xvda,rw", vif_bridge: "xenbr0" }
+      )
       allow(Xen::Properties).to receive(:vcpu_set)
       allow(Xen::Properties).to receive(:mem_set)
       allow(Xen::Properties).to receive(:update_config)
     end
 
-    context "with valid params" do
+    context "with valid cpu/memory params (disk/vif unchanged)" do
       it "calls vcpu_set with the new value" do
-        patch guest_properties_path("web01"), params: { vcpus: "4", memory: "1024" }
+        patch guest_properties_path("web01"),
+              params: { vcpus: "4", memory: "1024",
+                        disk: "phy:/dev/vg0/web01,xvda,rw", vif_bridge: "xenbr0" }
         expect(Xen::Properties).to have_received(:vcpu_set).with("web01", 4)
       end
 
       it "calls mem_set with the new value" do
-        patch guest_properties_path("web01"), params: { vcpus: "4", memory: "1024" }
+        patch guest_properties_path("web01"),
+              params: { vcpus: "4", memory: "1024",
+                        disk: "phy:/dev/vg0/web01,xvda,rw", vif_bridge: "xenbr0" }
         expect(Xen::Properties).to have_received(:mem_set).with("web01", 1024)
       end
 
       it "calls update_config to persist changes" do
-        patch guest_properties_path("web01"), params: { vcpus: "4", memory: "1024" }
+        patch guest_properties_path("web01"),
+              params: { vcpus: "4", memory: "1024",
+                        disk: "phy:/dev/vg0/web01,xvda,rw", vif_bridge: "xenbr0" }
         expect(Xen::Properties).to have_received(:update_config).with(
-          "web01", vcpus: 4, memory: 1024
+          "web01", vcpus: 4, memory: 1024,
+          disk: "phy:/dev/vg0/web01,xvda,rw", vif_bridge: "xenbr0"
         )
       end
 
       it "redirects to the guest show page with a notice" do
-        patch guest_properties_path("web01"), params: { vcpus: "4", memory: "1024" }
+        patch guest_properties_path("web01"),
+              params: { vcpus: "4", memory: "1024",
+                        disk: "phy:/dev/vg0/web01,xvda,rw", vif_bridge: "xenbr0" }
         expect(response).to redirect_to(guest_path("web01"))
         follow_redirect!
         expect(response.body).to include("Properties updated")
+      end
+    end
+
+    context "when disk is changed while running" do
+      it "renders the form with an error" do
+        patch guest_properties_path("web01"),
+              params: { vcpus: "2", memory: "512",
+                        disk: "phy:/dev/vg0/other,xvda,rw", vif_bridge: "xenbr0" }
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.body).to include("stopped")
+      end
+    end
+
+    context "when vif_bridge is changed while running" do
+      it "renders the form with an error" do
+        patch guest_properties_path("web01"),
+              params: { vcpus: "2", memory: "512",
+                        disk: "phy:/dev/vg0/web01,xvda,rw", vif_bridge: "xenbr1" }
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.body).to include("stopped")
       end
     end
 
@@ -161,7 +212,9 @@ RSpec.describe "Guests::Properties", type: :request do
       end
 
       it "renders the form again with unprocessable_entity status" do
-        patch guest_properties_path("web01"), params: { vcpus: "99", memory: "512" }
+        patch guest_properties_path("web01"),
+              params: { vcpus: "99", memory: "512",
+                        disk: "phy:/dev/vg0/web01,xvda,rw", vif_bridge: "xenbr0" }
         expect(response).to have_http_status(:unprocessable_entity)
         expect(response.body).to include("Could not update properties")
       end
@@ -178,7 +231,7 @@ RSpec.describe "Guests::Properties", type: :request do
         { stdout: xl_list_empty, stderr: "", success: true }
       )
       allow(Xen::Properties).to receive(:read_config).with("web01").and_return(
-        { vcpus: 2, memory: 512 }
+        { vcpus: 2, memory: 512, disk: "phy:/dev/vg0/web01,xvda,rw", vif_bridge: "xenbr0" }
       )
       allow(Xen::Properties).to receive(:vcpu_set)
       allow(Xen::Properties).to receive(:mem_set)
@@ -186,20 +239,34 @@ RSpec.describe "Guests::Properties", type: :request do
     end
 
     it "does not call vcpu_set or mem_set" do
-      patch guest_properties_path("web01"), params: { vcpus: "4", memory: "1024" }
+      patch guest_properties_path("web01"),
+            params: { vcpus: "4", memory: "1024",
+                      disk: "phy:/dev/vg0/web01,xvda,rw", vif_bridge: "xenbr0" }
       expect(Xen::Properties).not_to have_received(:vcpu_set)
       expect(Xen::Properties).not_to have_received(:mem_set)
     end
 
-    it "calls update_config to persist changes to the config file" do
-      patch guest_properties_path("web01"), params: { vcpus: "4", memory: "1024" }
+    it "calls update_config with all four values" do
+      patch guest_properties_path("web01"),
+            params: { vcpus: "4", memory: "1024",
+                      disk: "phy:/dev/vg0/web01,xvda,rw", vif_bridge: "xenbr1" }
       expect(Xen::Properties).to have_received(:update_config).with(
-        "web01", vcpus: 4, memory: 1024
+        "web01", vcpus: 4, memory: 1024,
+        disk: "phy:/dev/vg0/web01,xvda,rw", vif_bridge: "xenbr1"
       )
     end
 
+    it "allows changing disk while stopped" do
+      patch guest_properties_path("web01"),
+            params: { vcpus: "2", memory: "512",
+                      disk: "phy:/dev/vg0/newdisk,xvda,rw", vif_bridge: "xenbr0" }
+      expect(response).to redirect_to(guest_path("web01"))
+    end
+
     it "redirects to the guest show page with a notice" do
-      patch guest_properties_path("web01"), params: { vcpus: "4", memory: "1024" }
+      patch guest_properties_path("web01"),
+            params: { vcpus: "4", memory: "1024",
+                      disk: "phy:/dev/vg0/web01,xvda,rw", vif_bridge: "xenbr0" }
       expect(response).to redirect_to(guest_path("web01"))
       follow_redirect!
       expect(response.body).to include("Properties updated")

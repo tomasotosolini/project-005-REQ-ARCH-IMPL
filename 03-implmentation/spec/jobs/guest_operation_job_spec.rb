@@ -14,9 +14,20 @@ RSpec.describe GuestOperationJob, type: :job do
       allow(Xen::Lifecycle).to receive(:create).and_return("/tmp/web01.cfg")
     end
 
-    it "calls Xen::Lifecycle.create with the given params" do
+    it "calls Xen::Lifecycle.create with nil disk and vif_bridge when not supplied" do
       described_class.perform_now("web01", "create", memory: 512, vcpus: 2)
-      expect(Xen::Lifecycle).to have_received(:create).with(name: "web01", memory: 512, vcpus: 2)
+      expect(Xen::Lifecycle).to have_received(:create).with(
+        name: "web01", memory: 512, vcpus: 2, disk: nil, vif_bridge: nil
+      )
+    end
+
+    it "passes disk and vif_bridge through to Xen::Lifecycle.create" do
+      described_class.perform_now("web01", "create", memory: 512, vcpus: 2,
+                                  disk: "phy:/dev/vg0/web01,xvda,rw", vif_bridge: "xenbr0")
+      expect(Xen::Lifecycle).to have_received(:create).with(
+        name: "web01", memory: 512, vcpus: 2,
+        disk: "phy:/dev/vg0/web01,xvda,rw", vif_bridge: "xenbr0"
+      )
     end
 
     it "clears pending_operation on success" do

@@ -8,9 +8,11 @@ module Guests
     end
 
     def create
-      name   = params[:name].to_s.strip
-      memory = params[:memory].to_i
-      vcpus  = params[:vcpus].to_i
+      name       = params[:name].to_s.strip
+      memory     = params[:memory].to_i
+      vcpus      = params[:vcpus].to_i
+      disk       = params[:disk].to_s.strip.presence
+      vif_bridge = params[:vif_bridge].to_s.strip.presence
 
       if name.blank?
         flash.now[:alert] = "Name is required."
@@ -19,7 +21,8 @@ module Guests
 
       guest = Guest.find_or_create_by!(xen_name: name)
       guest.update!(pending_operation: "creating")
-      GuestOperationJob.perform_later(name, "create", memory: memory, vcpus: vcpus)
+      GuestOperationJob.perform_later(name, "create", memory: memory, vcpus: vcpus,
+                                      disk: disk, vif_bridge: vif_bridge)
       redirect_to guest_path(name), notice: "Guest '#{name}' is being created."
     rescue ActiveRecord::RecordInvalid => e
       flash.now[:alert] = "Could not create guest: #{e.message}"

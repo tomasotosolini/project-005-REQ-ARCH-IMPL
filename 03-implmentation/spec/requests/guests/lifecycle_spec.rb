@@ -55,11 +55,13 @@ RSpec.describe "Guests::Lifecycle", type: :request do
   # ── POST /guests (create) ────────────────────────────────────────────────────
 
   describe "POST /guests" do
-    context "with valid params" do
-      it "enqueues a GuestOperationJob for 'create'" do
+    context "with valid params (no disk or vif)" do
+      it "enqueues a GuestOperationJob with nil disk and vif_bridge" do
         expect {
           post guests_path, params: { name: "web02", memory: "512", vcpus: "2" }
-        }.to have_enqueued_job(GuestOperationJob).with("web02", "create", memory: 512, vcpus: 2)
+        }.to have_enqueued_job(GuestOperationJob).with(
+          "web02", "create", memory: 512, vcpus: 2, disk: nil, vif_bridge: nil
+        )
       end
 
       it "creates a DB guest record with pending_operation 'creating'" do
@@ -80,6 +82,20 @@ RSpec.describe "Guests::Lifecycle", type: :request do
         expect {
           post guests_path, params: { name: "web02", memory: "512", vcpus: "2" }
         }.not_to change(Guest, :count)
+      end
+    end
+
+    context "with disk and vif_bridge supplied" do
+      it "enqueues the job with disk and vif_bridge" do
+        expect {
+          post guests_path, params: {
+            name: "web02", memory: "512", vcpus: "2",
+            disk: "phy:/dev/vg0/web02,xvda,rw", vif_bridge: "xenbr0"
+          }
+        }.to have_enqueued_job(GuestOperationJob).with(
+          "web02", "create", memory: 512, vcpus: 2,
+          disk: "phy:/dev/vg0/web02,xvda,rw", vif_bridge: "xenbr0"
+        )
       end
     end
 

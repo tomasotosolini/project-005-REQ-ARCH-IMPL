@@ -12,12 +12,15 @@ class GuestOperationJob < ApplicationJob
 
   # @param xen_name [String]
   # @param operation [String] one of "start", "stop", "create", "destroy"
-  # @param memory [Integer] required for "create"
-  # @param vcpus  [Integer] required for "create"
-  def perform(xen_name, operation, memory: nil, vcpus: nil)
+  # @param memory     [Integer] required for "create"
+  # @param vcpus      [Integer] required for "create"
+  # @param disk       [String, nil] optional disk spec for "create"
+  # @param vif_bridge [String, nil] optional bridge name for "create"
+  def perform(xen_name, operation, memory: nil, vcpus: nil, disk: nil, vif_bridge: nil)
     case operation
     when "create"
-      Xen::Lifecycle.create(name: xen_name, memory: memory.to_i, vcpus: vcpus.to_i)
+      Xen::Lifecycle.create(name: xen_name, memory: memory.to_i, vcpus: vcpus.to_i,
+                            disk: disk.presence, vif_bridge: vif_bridge.presence)
     when "start"
       Xen::Lifecycle.start(xen_name)
     when "stop"
