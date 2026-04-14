@@ -7,7 +7,7 @@
 <turbo-stream-source src="<%= monitor_guest_path(name) %>"></turbo-stream-source>
 
 <div id="guest-monitor">
-  <%= render partial: "monitor_panel", locals: { guest: @xen_guest, name: name } %>
+  <%= render partial: "monitor_panel", locals: { guest: @xen_guest, name: name, pending: @db_guest&.pending_operation } %>
 </div>
 
 <% if @xen_guest %>

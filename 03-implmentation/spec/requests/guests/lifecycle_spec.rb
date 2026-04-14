@@ -1,6 +1,8 @@
 require "rails_helper"
 
 RSpec.describe "Guests::Lifecycle", type: :request do
+  include ActiveJob::TestHelper
+
   let!(:user) { create(:user) }  # operator by default
 
   let(:xl_list_output) do
@@ -53,30 +55,24 @@ RSpec.describe "Guests::Lifecycle", type: :request do
   # ── POST /guests (create) ────────────────────────────────────────────────────
 
   describe "POST /guests" do
-    before do
-      allow(Xen::Lifecycle).to receive(:create).and_return("/tmp/web02.cfg")
-    end
-
     context "with valid params" do
-      it "calls Xen::Lifecycle.create with the given params" do
-        post guests_path, params: { name: "web02", memory: "512", vcpus: "2" }
-        expect(Xen::Lifecycle).to have_received(:create).with(
-          name: "web02", memory: 512, vcpus: 2
-        )
-      end
-
-      it "creates a DB guest record" do
+      it "enqueues a GuestOperationJob for 'create'" do
         expect {
           post guests_path, params: { name: "web02", memory: "512", vcpus: "2" }
-        }.to change(Guest, :count).by(1)
-        expect(Guest.find_by(xen_name: "web02")).not_to be_nil
+        }.to have_enqueued_job(GuestOperationJob).with("web02", "create", memory: 512, vcpus: 2)
+      end
+
+      it "creates a DB guest record with pending_operation 'creating'" do
+        post guests_path, params: { name: "web02", memory: "512", vcpus: "2" }
+        guest = Guest.find_by!(xen_name: "web02")
+        expect(guest.pending_operation).to eq("creating")
       end
 
       it "redirects to the guest show page with a notice" do
         post guests_path, params: { name: "web02", memory: "512", vcpus: "2" }
         expect(response).to redirect_to(guest_path("web02"))
         follow_redirect!
-        expect(response.body).to include("created and started")
+        expect(response.body).to include("is being created")
       end
 
       it "does not duplicate a DB record when the guest already exists" do
@@ -94,23 +90,10 @@ RSpec.describe "Guests::Lifecycle", type: :request do
         expect(response.body).to include("Name is required")
       end
 
-      it "does not call Xen::Lifecycle.create" do
-        post guests_path, params: { name: "", memory: "512", vcpus: "2" }
-        expect(Xen::Lifecycle).not_to have_received(:create)
-      end
-    end
-
-    context "when Xen raises a CommandError" do
-      before do
-        allow(Xen::Lifecycle).to receive(:create).and_raise(
-          Xen::CommandError.new("xl exited 1", stdout: "", stderr: "xl: domain 'web02' already exists")
-        )
-      end
-
-      it "renders the form again with unprocessable_entity status" do
-        post guests_path, params: { name: "web02", memory: "512", vcpus: "2" }
-        expect(response).to have_http_status(:unprocessable_entity)
-        expect(response.body).to include("already exists")
+      it "does not enqueue a job" do
+        expect {
+          post guests_path, params: { name: "", memory: "512", vcpus: "2" }
+        }.not_to have_enqueued_job(GuestOperationJob)
       end
     end
   end
@@ -118,119 +101,69 @@ RSpec.describe "Guests::Lifecycle", type: :request do
   # ── POST /guests/:name/start ─────────────────────────────────────────────────
 
   describe "POST /guests/:name/start" do
-    before { allow(Xen::Lifecycle).to receive(:start) }
+    it "enqueues a GuestOperationJob for 'start'" do
+      expect {
+        post start_guest_path("web01")
+      }.to have_enqueued_job(GuestOperationJob).with("web01", "start")
+    end
 
-    it "calls Xen::Lifecycle.start with the guest name" do
+    it "sets pending_operation to 'starting' on the guest record" do
+      guest = create(:guest, xen_name: "web01")
       post start_guest_path("web01")
-      expect(Xen::Lifecycle).to have_received(:start).with("web01")
+      expect(guest.reload.pending_operation).to eq("starting")
     end
 
     it "redirects to the guest show page with a notice" do
       post start_guest_path("web01")
       expect(response).to redirect_to(guest_path("web01"))
       follow_redirect!
-      expect(response.body).to include("started")
-    end
-
-    context "when Xen raises a CommandError" do
-      before do
-        allow(Xen::Lifecycle).to receive(:start).and_raise(
-          Xen::CommandError.new("xl exited 1", stdout: "", stderr: "xl: domain 'web01' already exists")
-        )
-      end
-
-      it "redirects to the show page with an alert" do
-        post start_guest_path("web01")
-        expect(response).to redirect_to(guest_path("web01"))
-        follow_redirect!
-        expect(response.body).to include("Could not start")
-      end
+      expect(response.body).to include("is starting")
     end
   end
 
   # ── POST /guests/:name/stop ──────────────────────────────────────────────────
 
   describe "POST /guests/:name/stop" do
-    before { allow(Xen::Lifecycle).to receive(:stop) }
+    it "enqueues a GuestOperationJob for 'stop'" do
+      expect {
+        post stop_guest_path("web01")
+      }.to have_enqueued_job(GuestOperationJob).with("web01", "stop")
+    end
 
-    it "calls Xen::Lifecycle.stop with the guest name" do
+    it "sets pending_operation to 'stopping' on the guest record" do
+      guest = create(:guest, xen_name: "web01")
       post stop_guest_path("web01")
-      expect(Xen::Lifecycle).to have_received(:stop).with("web01")
+      expect(guest.reload.pending_operation).to eq("stopping")
     end
 
     it "redirects to the guest show page with a notice" do
       post stop_guest_path("web01")
       expect(response).to redirect_to(guest_path("web01"))
       follow_redirect!
-      expect(response.body).to include("stopped")
-    end
-
-    context "when Xen raises a CommandError" do
-      before do
-        allow(Xen::Lifecycle).to receive(:stop).and_raise(
-          Xen::CommandError.new("xl exited 1", stdout: "", stderr: "xl: domain 'web01' does not exist")
-        )
-      end
-
-      it "redirects to the show page with an alert" do
-        post stop_guest_path("web01")
-        expect(response).to redirect_to(guest_path("web01"))
-        follow_redirect!
-        expect(response.body).to include("Could not stop")
-      end
+      expect(response.body).to include("is stopping")
     end
   end
 
   # ── DELETE /guests/:name ─────────────────────────────────────────────────────
 
   describe "DELETE /guests/:name" do
-    before { allow(Xen::Lifecycle).to receive(:destroy) }
-
-    context "when a DB record exists" do
-      let!(:db_guest) { create(:guest, xen_name: "web01") }
-
-      it "calls Xen::Lifecycle.destroy with the guest name" do
+    it "enqueues a GuestOperationJob for 'destroy'" do
+      expect {
         delete guest_path("web01")
-        expect(Xen::Lifecycle).to have_received(:destroy).with("web01")
-      end
-
-      it "removes the DB guest record" do
-        expect { delete guest_path("web01") }.to change(Guest, :count).by(-1)
-      end
-
-      it "redirects to the guests index with a notice" do
-        delete guest_path("web01")
-        expect(response).to redirect_to(guests_path)
-        follow_redirect!
-        expect(response.body).to include("deleted")
-      end
+      }.to have_enqueued_job(GuestOperationJob).with("web01", "destroy")
     end
 
-    context "when no DB record exists" do
-      it "still calls Xen::Lifecycle.destroy" do
-        delete guest_path("web01")
-        expect(Xen::Lifecycle).to have_received(:destroy).with("web01")
-      end
-
-      it "redirects to the guests index" do
-        delete guest_path("web01")
-        expect(response).to redirect_to(guests_path)
-      end
+    it "sets pending_operation to 'destroying' when a DB record exists" do
+      guest = create(:guest, xen_name: "web01")
+      delete guest_path("web01")
+      expect(guest.reload.pending_operation).to eq("destroying")
     end
 
-    context "when Xen raises a CommandError" do
-      before do
-        allow(Xen::Lifecycle).to receive(:destroy).and_raise(
-          Xen::CommandError.new("xl exited 1", stdout: "", stderr: "xl: permission denied")
-        )
-      end
-
-      it "redirects to the show page with an alert" do
-        delete guest_path("web01")
-        expect(response).to redirect_to(guest_path("web01"))
-        follow_redirect!
-        expect(response.body).to include("Could not delete")
-      end
+    it "redirects to the guests index with a notice" do
+      delete guest_path("web01")
+      expect(response).to redirect_to(guests_path)
+      follow_redirect!
+      expect(response.body).to include("is being deleted")
     end
   end
 end
