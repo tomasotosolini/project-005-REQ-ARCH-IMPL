@@ -16,8 +16,8 @@
       <%= button_to "Stop",    stop_guest_path(name),  method: :post %>
     <% end %>
     <% if current_user.has_grant?(:creator) %>
-      <%= button_to "Destroy", guest_path(name),        method: :delete,
-          data: { turbo_confirm: "Force-destroy #{name}? This cannot be undone." } %>
+      <%= button_to "Stop and Destroy", guest_path(name), method: :delete,
+          data: { turbo_confirm: "Stop and destroy #{name}? This cannot be undone." } %>
     <% end %>
   </p>
 <% elsif @db_guest %>
@@ -26,8 +26,8 @@
       <%= button_to "Start",   start_guest_path(name), method: :post %>
     <% end %>
     <% if current_user.has_grant?(:creator) %>
-      <%= button_to "Delete",  guest_path(name),        method: :delete,
-          data: { turbo_confirm: "Delete #{name}? This cannot be undone." } %>
+      <%= button_to "Destroy", guest_path(name),        method: :delete,
+          data: { turbo_confirm: "Destroy #{name}? This cannot be undone." } %>
     <% end %>
   </p>
 <% end %>
