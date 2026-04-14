@@ -1,5 +1,5 @@
 class Admin::UsersController < ApplicationController
-  before_action :require_admin
+  before_action -> { require_grant(:creator) }
   before_action :set_user, only: %i[edit update destroy]
 
   def index
@@ -40,10 +40,6 @@ class Admin::UsersController < ApplicationController
   end
 
   private
-
-  def require_admin
-    require_role(:admin)
-  end
 
   def set_user
     @user = User.find(params[:id])

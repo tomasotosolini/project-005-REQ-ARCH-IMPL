@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe "Admin::Users", type: :request do
   let!(:admin) { create(:user, :admin) }
-  let!(:other_user) { create(:user, role: "operator") }
+  let!(:other_user) { create(:user, role: "user") }
 
   before do
     post login_path, params: { email: admin.email, password: "password123" }
@@ -11,16 +11,16 @@ RSpec.describe "Admin::Users", type: :request do
   # ── Authorization ─────────────────────────────────────────────────────────────
 
   describe "non-admin access" do
-    let!(:operator) { create(:user, role: "operator") }
+    let!(:regular_user) { create(:user, role: "user") }
 
     before do
       delete logout_path
-      post login_path, params: { email: operator.email, password: "password123" }
+      post login_path, params: { email: regular_user.email, password: "password123" }
     end
 
-    it "redirects GET /admin/users to login" do
+    it "redirects GET /admin/users to root" do
       get admin_users_path
-      expect(response).to redirect_to(login_path)
+      expect(response).to redirect_to(root_path)
     end
   end
 
@@ -60,7 +60,7 @@ RSpec.describe "Admin::Users", type: :request do
     context "with valid params" do
       let(:valid_params) do
         { user: { email: "new@example.com", password: "secret123",
-                  password_confirmation: "secret123", role: "viewer" } }
+                  password_confirmation: "secret123", role: "guest" } }
       end
 
       it "creates a new user" do
@@ -78,7 +78,7 @@ RSpec.describe "Admin::Users", type: :request do
     context "with invalid params (blank email)" do
       let(:invalid_params) do
         { user: { email: "", password: "secret123",
-                  password_confirmation: "secret123", role: "viewer" } }
+                  password_confirmation: "secret123", role: "guest" } }
       end
 
       it "does not create a user" do
@@ -94,7 +94,7 @@ RSpec.describe "Admin::Users", type: :request do
     context "with mismatched password confirmation" do
       let(:mismatch_params) do
         { user: { email: "new@example.com", password: "secret123",
-                  password_confirmation: "wrong", role: "viewer" } }
+                  password_confirmation: "wrong", role: "guest" } }
       end
 
       it "re-renders the form" do
@@ -120,13 +120,13 @@ RSpec.describe "Admin::Users", type: :request do
     context "changing the role" do
       it "updates the user's role" do
         patch admin_user_path(other_user),
-              params: { user: { role: "viewer", password: "", password_confirmation: "" } }
-        expect(other_user.reload.role).to eq("viewer")
+              params: { user: { role: "guest", password: "", password_confirmation: "" } }
+        expect(other_user.reload.role).to eq("guest")
       end
 
       it "redirects to users index with notice" do
         patch admin_user_path(other_user),
-              params: { user: { role: "viewer", password: "", password_confirmation: "" } }
+              params: { user: { role: "guest", password: "", password_confirmation: "" } }
         expect(response).to redirect_to(admin_users_path)
         follow_redirect!
         expect(response.body).to include("User updated")
@@ -137,7 +137,7 @@ RSpec.describe "Admin::Users", type: :request do
       it "accepts the new password" do
         patch admin_user_path(other_user),
               params: { user: { password: "newpassword", password_confirmation: "newpassword",
-                                role: "operator" } }
+                                role: "user" } }
         expect(response).to redirect_to(admin_users_path)
       end
     end
@@ -147,7 +147,7 @@ RSpec.describe "Admin::Users", type: :request do
         old_digest = other_user.password_digest
         patch admin_user_path(other_user),
               params: { user: { email: other_user.email, password: "",
-                                password_confirmation: "", role: "operator" } }
+                                password_confirmation: "", role: "user" } }
         expect(other_user.reload.password_digest).to eq(old_digest)
       end
     end
@@ -155,7 +155,7 @@ RSpec.describe "Admin::Users", type: :request do
     context "with invalid data" do
       it "re-renders the form with unprocessable_entity" do
         patch admin_user_path(other_user),
-              params: { user: { email: "", role: "operator" } }
+              params: { user: { email: "", role: "user" } }
         expect(response).to have_http_status(:unprocessable_entity)
       end
     end

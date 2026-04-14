@@ -20,7 +20,7 @@
     <% if logged_in? %>
       <nav>
         <%= current_user.email %> &mdash;
-        <% if current_user.admin? %>
+        <% if current_user.has_grant?(:creator) %>
           <%= link_to "Admin", admin_users_path %> &mdash;
         <% end %>
         <%= button_to "Log out", logout_path, method: :delete %>

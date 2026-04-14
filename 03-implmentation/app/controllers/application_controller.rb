@@ -34,9 +34,9 @@ class ApplicationController < ActionController::Base
     end
   end
 
-  def require_role(*roles)
-    unless current_user&.role.in?(roles.map(&:to_s))
-      redirect_to login_path, alert: "You are not authorized to perform that action."
+  def require_grant(grant)
+    unless current_user&.has_grant?(grant)
+      redirect_to root_path, alert: "You are not authorized to perform that action."
     end
   end
 end
