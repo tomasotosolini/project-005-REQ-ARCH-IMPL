@@ -4,6 +4,12 @@ Working notes on the implementation layer: patterns in use, non-obvious choices,
 
 ## Changes history (LESS RECENT)
 
+### 2026-04-14 — Seed data / initial admin user
+
+- `db/seeds.rb` — uses `find_or_create_by!` to create `admin@localhost` with role `admin` and password `changeme`. Fully idempotent; safe to re-run in any environment.
+- No model or migration changes required.
+- Suite: 169 examples, 0 failures.
+
 ### 2026-04-14 — Disk and network property configuration
 
 - `app/services/xen/lifecycle.rb` — `generate_config` and `create` now accept optional `disk:` (full xl spec, e.g. `phy:/dev/vg0/name,xvda,rw`) and `vif_bridge:` (bridge name). Lines are only emitted when the values are present.

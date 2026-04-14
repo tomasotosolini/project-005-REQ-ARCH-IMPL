@@ -6,27 +6,33 @@
   <p><%= link_to "New guest", new_guest_path %></p>
 <% end %>
 
-<% if @xen_guests.empty? %>
-  <p>No guests are currently running.</p>
+<% if @guests.empty? %>
+  <p>No guests registered.</p>
 <% else %>
   <table>
     <thead>
       <tr>
         <th>Name</th>
-        <th>ID</th>
+        <th>Status</th>
         <th>State</th>
         <th>Memory (MiB)</th>
         <th>vCPUs</th>
+        <th>CPU time (s)</th>
+        <th>Disk</th>
+        <th>VIF Bridge</th>
       </tr>
     </thead>
     <tbody>
-      <% @xen_guests.each do |guest| %>
+      <% @guests.each do |g| %>
         <tr>
-          <td><%= link_to guest.name, guest_path(guest.name) %></td>
-          <td><%= guest.id %></td>
-          <td><%= guest.state %></td>
-          <td><%= guest.memory %></td>
-          <td><%= guest.vcpus %></td>
+          <td><%= link_to g[:name], guest_path(g[:name]) %></td>
+          <td><%= g[:running] ? "running" : "stopped" %></td>
+          <td><%= g[:state] || "—" %></td>
+          <td><%= g[:memory] || "—" %></td>
+          <td><%= g[:vcpus] || "—" %></td>
+          <td><%= g[:running] ? g[:cpu_time] : "—" %></td>
+          <td><%= g[:disk] || "—" %></td>
+          <td><%= g[:vif_bridge] || "—" %></td>
         </tr>
       <% end %>
     </tbody>

@@ -32,6 +32,19 @@
   </p>
 <% end %>
 
+<% if @config[:disk].present? || @config[:vif_bridge].present? %>
+  <table>
+    <tbody>
+      <% if @config[:disk].present? %>
+        <tr><th>Disk</th><td><%= @config[:disk] %></td></tr>
+      <% end %>
+      <% if @config[:vif_bridge].present? %>
+        <tr><th>VIF Bridge</th><td><%= @config[:vif_bridge] %></td></tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>
+
 <% if current_user.has_grant?(:editor) %>
   <p><%= link_to "Edit Properties", edit_guest_properties_path(name) %></p>
 <% end %>
