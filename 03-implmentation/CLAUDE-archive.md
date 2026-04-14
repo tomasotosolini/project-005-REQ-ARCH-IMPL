@@ -1,8 +1,27 @@
-# Implementation — Archive
+# Implementation — Claude's Notes
 
-Historical implementation notes. See `CLAUDE.md` for the two most recent entries.
+Working notes on the implementation layer: patterns in use, non-obvious choices, known gotchas, and anything worth remembering across sessions.
 
-## 2026-04-13 — Guest monitor (SSE / Turbo Streams)
+## Changes history (FULL ARCHIVE)
+
+### 2026-04-14 — Session expiry
+
+- `config/initializers/session_store.rb` — explicit `:cookie_store` with `expire_after` (default 8h, env `SESSION_ABSOLUTE_TTL_HOURS`), `same_site: :lax`, `secure: true` in production only.
+- `ApplicationController#enforce_session_idle_timeout` — before-action; checks `session[:last_seen_at]` on every authenticated request. Calls `reset_session` and redirects to `login_path` if idle window exceeded (default 30 min, env `SESSION_IDLE_TIMEOUT_MINUTES`). Updates `last_seen_at` on every passing request.
+- `spec/rails_helper.rb` — added `config.include ActiveSupport::Testing::TimeHelpers` (required for `travel_to` / `freeze_time` in request specs).
+- 3 new examples in `sessions_spec.rb`: within-window access, idle expiry via `travel_to`, `last_seen_at` stamp via `freeze_time`.
+- Suite: 152 examples, 0 failures.
+
+### 2026-04-13 — Admin area (user CRUD)
+
+- `Admin::UsersController` — index, new/create, edit/update, destroy. Scoped under `namespace :admin`.
+- `require_admin` before-action calls the existing `require_role(:admin)` helper — non-admin users are redirected to `login_path` with an alert.
+- Destroy guard: admin cannot delete their own account (checked against `current_user`); shows an alert and redirects to the index.
+- Password on edit: `update_params` strips blank `password` / `password_confirmation` keys so the digest is not overwritten when the admin leaves the fields empty.
+- Nav: "Admin" link added to the layout, visible only when `current_user.admin?`.
+- Suite: 147 examples, 0 failures.
+
+### 2026-04-13 — Guest monitor (SSE / Turbo Streams)
 
 - `Xen::Monitor.snapshot(name)` — thin wrapper around `GuestLister.list`; returns the matching `GuestRecord` or nil when the guest is not running.
 - `Xen::GuestRecord` extracted to its own file `xen/guest_record.rb` so Zeitwerk can autoload it by constant name. Previously defined inline in `guest_lister.rb` alongside the lister — fine at runtime but breaks view specs that reference the struct without first touching `GuestLister`.
@@ -13,7 +32,7 @@ Historical implementation notes. See `CLAUDE.md` for the two most recent entries
 - Testing strategy: `ActionController::Live` body chunks are not captured by Rack::Test (`response.body` returns `""`). Request spec covers auth redirect + `Content-Type` header only. Content rendering is covered by a dedicated view spec for `_monitor_panel`.
 - Suite: 112 examples, 0 failures.
 
-## 2026-04-13 — Guest lifecycle (create/start/stop/destroy)
+### 2026-04-13 — Guest lifecycle (create/start/stop/destroy)
 
 - `Xen::Lifecycle` service: `create`, `start`, `stop`, `destroy`. `destroy` tolerates "does not exist" from xl (guest already stopped) so config + DB cleanup still runs.
 - Config file location: `ENV["XEN_CONFIG_DIR"]`, defaulting to `tmp/fake-xen/configs` in development and `/etc/xen/managed` in production. No Procfile.dev change needed.
@@ -23,7 +42,7 @@ Historical implementation notes. See `CLAUDE.md` for the two most recent entries
 - Spec stubs `Xen::Lifecycle` at the service level (not `Executor`) — keeps controller specs clean without file system or xl dependency.
 - Suite: 103 examples, 0 failures.
 
-## 2026-04-12 — guests#show
+### 2026-04-12 — guests#show
 
 - Route: `GET /guests/:name` using `:name` (Xen domain name) rather than a DB id — Xen is authoritative, not the DB.
 - `show` finds the guest by scanning `GuestLister.list`; also looks up the `Guest` DB record. If neither exists, redirects to `guests_path` with an alert.
@@ -31,7 +50,7 @@ Historical implementation notes. See `CLAUDE.md` for the two most recent entries
 - Index view links each guest name to its show page via `guest_path(guest.name)`.
 - Suite: 82 examples, 0 failures.
 
-## 2026-04-12 — Xen service layer + guests#index
+### 2026-04-12 — Xen service layer + guests#index
 
 - `Xen::Executor.run(cmd, *args)` — shells out via `Open3.capture3` using an explicit argument array (no shell interpolation). Raises `Xen::CommandError` (with stdout/stderr attached) on non-zero exit.
 - `Xen::GuestRecord` — `Struct` with fields: `name, id, memory, vcpus, state, time`. Lives in `xen/guest_lister.rb` alongside the parser that populates it.
@@ -41,7 +60,7 @@ Historical implementation notes. See `CLAUDE.md` for the two most recent entries
 - Stub pattern for tests: `allow(Xen::Executor).to receive(:run).with("xl", "list").and_return(...)` — avoids any dependency on xl being present. Added to both `guests_spec.rb` and `sessions_spec.rb` (root redirect now hits guests#index).
 - Suite: 79 examples, 0 failures.
 
-## 2026-04-12 — Login management (home controller + layout nav)
+### 2026-04-12 — Login management (home controller + layout nav)
 
 - `HomeController#index` — minimal authenticated landing page; inherits `require_login` from `ApplicationController`. Placeholder until `guests#index` is built.
 - Root route now wired to `home#index` (was `sessions#new`). Unauthenticated GET / redirects to login.
@@ -49,7 +68,7 @@ Historical implementation notes. See `CLAUDE.md` for the two most recent entries
 - `sessions#new` guard: redirects to root if already logged in — visiting `/login` while authenticated goes straight to the dashboard.
 - Spec: `sessions_spec.rb` updated — added "redirects to root when already logged in", "re-login is possible after logout", and updated `require_login` block to assert the redirect (root is now protected).
 
-## 2026-04-12 — Authentication
+### 2026-04-12 — Authentication
 
 - `ApplicationController`: `require_login` before_action (redirects to `login_path`), `current_user` (session[:user_id] → User lookup), `logged_in?`, and `require_role(*roles)` helper. Both `current_user` and `logged_in?` are exposed as `helper_method`.
 - `SessionsController`: skips `require_login`. `create` looks up by downcased email and calls `authenticate`; sets `session[:user_id]` on success. `destroy` deletes the session key and redirects to login.
@@ -59,7 +78,7 @@ Historical implementation notes. See `CLAUDE.md` for the two most recent entries
 - `require_login` will be tested end-to-end once the first non-session protected route (guests#index) exists. The root route currently maps to `sessions#new` which skips `require_login`, so it can't serve as the redirect target test.
 - Suite: 74 examples, 0 failures.
 
-## 2026-04-11 — Rails scaffold + models
+### 2026-04-11 — Rails scaffold + models
 
 - Rails 7.2.3.1 scaffolded with `rails new . --name=xen_manager --database=sqlite3 --skip-test --skip-bundle`.
 - Directory name (`03-implmentation`) starts with a digit — `--name=xen_manager` is required; without it `rails new` exits with "Invalid application name".
@@ -70,7 +89,7 @@ Historical implementation notes. See `CLAUDE.md` for the two most recent entries
 - FactoryBot used for model specs; factories in `spec/factories/`. `bundler3.1 exec` works freely; new gem installs require user to run bundler (no write perms to `/var/lib/gems/`).
 - Full suite: 67 examples (51 fake xl + 16 model), 0 failures.
 
-## 2026-04-11 — Dev environment: fake xl
+### 2026-04-11 — Dev environment: fake xl
 
 - Chose emulated xl over real Xen for development, even though Xen is present on the host. Reason: isolation, reproducibility, no risk of affecting real guests during dev.
 - `Xen::Executor` is the single seam — no branching needed in application code. PATH override is sufficient.
@@ -80,7 +99,7 @@ Historical implementation notes. See `CLAUDE.md` for the two most recent entries
 - `Time(s)` in `xl list` output is randomized on each call; realistic enough for the monitoring view.
 - Reference document: `dev/fake-xl.md`
 
-## 2026-04-11 — fake xl test suite
+### 2026-04-11 — fake xl test suite
 
 - Test framework: RSpec (chosen before Rails is set up; will integrate into the Rails app's Gemfile and `rails_helper` when created).
 - Strategy: subprocess testing — each example invokes `bin/fake_xl` via `Open3.capture3` with `FAKE_XEN_STATE` pointing to a per-example temp directory. Tests the actual binary end-to-end, including stdout format, exit codes, and state file mutations.
